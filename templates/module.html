@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}{{ module.title }} · ISS GNC Onboarding{% endblock %}
+
+{% block content %}
+<article class="module" data-module="{{ module.id }}">
+  <a class="back" href="{{ url_for('index') }}">← all modules</a>
+  <h1 class="module-title">{{ module.title }}</h1>
+
+  {% for block in blocks %}
+    {% if block.kind == 'markdown' %}
+      <div class="prose">{{ block.html | safe }}</div>
+
+    {% elif block.kind == 'code' %}
+      <div class="example">
+        <div class="highlight"><pre>{{ block.html | safe }}</pre></div>
+        {% if block.output %}
+          <pre class="cell-output">{{ block.output }}</pre>
+        {% endif %}
+      </div>
+
+    {% elif block.kind == 'exercise' %}
+      {% set ex = block.exercise %}
+      <section class="exercise {{ 'is-done' if ex.id in done else '' }}"
+               data-exercise="{{ ex.id }}"
+               data-graded="{{ '1' if ex.graded else '0' }}">
+        <header class="ex-head">
+          <span class="ex-title">{{ ex.title }}</span>
+          {% if ex.graded %}
+            <span class="tag graded">Graded · {{ ex.points }} pt{{ '' if ex.points == 1 else 's' }}</span>
+          {% else %}
+            <span class="tag practice">Practice</span>
+          {% endif %}
+          <span class="ex-status" aria-live="polite"></span>
+        </header>
+
+        <textarea class="editor">{{ ex.stub_code }}</textarea>
+
+        <div class="ex-actions">
+          <button class="btn run" type="button">▶ Run</button>
+          <button class="btn check" type="button">
+            {{ 'Submit &amp; Check' | safe if ex.graded else 'Mark Complete' }}
+          </button>
+        </div>
+
+        <pre class="ex-output" hidden></pre>
+        <div class="feedback" hidden></div>
+      </section>
+    {% endif %}
+  {% endfor %}
+</article>
+{% endblock %}

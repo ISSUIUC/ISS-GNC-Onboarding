@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Modules · ISS GNC Onboarding{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <h1>Guidance, Navigation &amp; Control — Onboarding</h1>
+  <p>Work through each module in order. Read the explanations, run the examples,
+     and solve the exercises. Graded exercises check your answer automatically and
+     track your progress.</p>
+</section>
+
+<ul class="module-list">
+  {% for module in modules %}
+  {% set c = counts[module.id] %}
+  <li class="module-card">
+    <a href="{{ url_for('module_page', module_id=module.id) }}">
+      <span class="index">{{ '%02d' % loop.index }}</span>
+      <span class="body">
+        <span class="name">{{ module.title }}</span>
+        <span class="meta">
+          {{ module.exercises | length }} exercise{{ '' if module.exercises|length == 1 else 's' }}
+          {% if c.total %}· {{ c.done }}/{{ c.total }} graded complete{% endif %}
+        </span>
+      </span>
+      {% if c.total and c.done == c.total %}
+        <span class="badge done">✓ done</span>
+      {% elif c.done %}
+        <span class="badge partial">{{ c.done }}/{{ c.total }}</span>
+      {% endif %}
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+
+{% if not modules %}
+<p class="empty">No notebooks found in <code>notebooks/</code>.</p>
+{% endif %}
+{% endblock %}
