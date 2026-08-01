@@ -54,11 +54,14 @@ print(5 > 3, 5 < 3, 5 == 2, 5 > 1)   # prints: True False False True
 ### END SOLUTION
 ```
 
-Or require certain phrases to appear (great for open-ended challenges):
+Or require certain phrases to appear:
 
 ```python
 #% check_output_contains: Liftoff!, Low Fuel!, Engine Cutoff!
 ```
+
+That one's a low bar on purpose — three bare `print`s satisfy it. When a task is
+open-ended enough that you'd want more, reach for a behaviour checker (below).
 
 ### "Fix this code" exercises
 
@@ -76,6 +79,77 @@ print(5 > 3, 5 < 3, 5 == 2, 5 > 1)
 ### END SOLUTION
 ```
 
+## Grading open-ended challenges (behaviour checkers)
+
+Some tasks have no single right answer — *"simulate a rocket; pick your own
+climb rate and tank size"*. Checking variables or exact output can't grade those,
+and `check_output_contains` is too weak (three bare `print`s pass it). For these,
+write a **behaviour checker**: your own Python that inspects the submission and
+reports named checks.
+
+Point the exercise at a file in `notebooks/checkers/`:
+
+```python
+#% exercise
+#% checker: rocket_flight.py
+### BEGIN SOLUTION
+...                     # still worth having: it's run as setup for later cells
+### END SOLUTION
+```
+
+Or write it inline for something short (the region is invisible to the student
+and never runs as their code):
+
+```python
+### BEGIN CHECKER
+def check(ctx):
+    ctx.require("Uses a loop", ctx.uses("while"), "A row of prints isn't a simulation.")
+    ctx.require("Counts down to zero", ctx.get("fuel") == 0)
+### END CHECKER
+```
+
+Your checker defines `check(ctx)` and calls `ctx.require(...)` once per thing you
+want to verify — each one becomes a green/red row in the student's feedback, and
+the score is the fraction that pass. It runs in the same sandboxed subprocess,
+immediately after the submission, so it sees everything:
+
+| | |
+|---|---|
+| `ctx.ok` / `ctx.error` | did their code run; the traceback if not |
+| `ctx.stdout` / `ctx.lines` | everything they printed (`lines` = stripped, non-blank) |
+| `ctx.env` | the namespace they left behind |
+| `ctx.source` / `ctx.tree` | their code as text / as an AST |
+| `ctx.assigned` | names *their* code assigns (not inherited from setup cells) |
+| `ctx.uses(kind)` / `ctx.count(kind)` | `"while"`, `"for"`, `"if"`, `"def"`, `"print"`, `"fstring"`, … |
+| `ctx.defined(*names)` | the first of `names` they actually assigned, else `None` |
+| `ctx.get(*names, default=None)` | that variable's value |
+
+```python
+ctx.require(label, condition, message="", expected=None, got=None)  # -> bool
+```
+
+`message`, `expected` and `got` are only shown when the check fails. `require`
+returns the condition, so you can bail out early instead of piling on confusing
+follow-up failures:
+
+```python
+if not ctx.require("Prints a flight log", ctx.lines, "Nothing was printed."):
+    return
+```
+
+`notebooks/checkers/rocket_flight.py` is the worked example (written up in
+`notebooks/checkers/rocket_flight.md`): it reads the
+altitude and fuel numbers back out of the student's printed log and re-flies the
+mission from them, checking the climb matches their own velocity, the fuel burn
+is steady and lands on zero, and each event fires at the right second. Two habits
+from it worth copying — judge ambiguous cases in the student's favour, and say
+in the prompt whatever your checker relies on (there, that the numbers are
+labelled).
+
+Guardrails: a checker that crashes, or a `#% checker:` filename that doesn't
+exist, shows the student one failed "Automatic checks" row telling them to
+report it — it never silently marks the exercise ungraded.
+
 ## All directives
 
 Directives are comment lines starting with `#%`. They never appear to the
@@ -87,6 +161,7 @@ student and never run.
 | `#% check: a, b~0.001, c` | Grade these variables. `~tol` sets an absolute tolerance (default is a relative `1e-6`). |
 | `#% check_output` | Require stdout to match the reference (whitespace-lenient). |
 | `#% check_output_contains: x, y` | Require these substrings in stdout. |
+| `#% checker: rocket_flight.py` | Grade with a behaviour checker from `notebooks/checkers/`. |
 | `#% points: 2` | Weight for this exercise (default 1). |
 | `#% title: Dot products` | Override the exercise title. |
 | `#% id: vectors-dot` | Stable id (default `<module>-ex<N>`). Set this if you reorder cells and want progress to stick. |
@@ -98,6 +173,7 @@ student and never run.
 |--------|:--:|:--:|
 | `### BEGIN SOLUTION` … `### END SOLUTION` | no | yes |
 | `### BEGIN STUB` … `### END STUB` | yes | no |
+| `### BEGIN CHECKER` … `### END CHECKER` | no | as the checker, after the submission |
 | everything else in the cell | yes | yes |
 
 ## What gets checked, by type

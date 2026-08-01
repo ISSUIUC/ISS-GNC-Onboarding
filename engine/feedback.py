@@ -153,6 +153,28 @@ def compare_output(ref_out: str, got_out: str, reveal: bool) -> CheckResult:
     )
 
 
+def behaviour_checks(rows: list[dict], reveal: bool) -> list[CheckResult]:
+    """Adopt the rows a behaviour checker produced in the runner.
+
+    An empty list means the checker never got to run — the submission timed out
+    or died — so say that rather than silently showing no checks at all.
+    """
+    if not rows:
+        return [CheckResult(
+            "Automatic checks", ok=False,
+            message="Your code didn't finish running, so the checks couldn't run.")]
+    return [
+        CheckResult(
+            label=row.get("label", "Check"),
+            ok=bool(row.get("ok")),
+            message=row.get("message", "") or "",
+            expected=row.get("expected") if reveal else None,
+            got=row.get("got"),
+        )
+        for row in rows
+    ]
+
+
 def output_contains(got_out: str, substrings: list[str]) -> list[CheckResult]:
     results = []
     for sub in substrings:

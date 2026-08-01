@@ -38,6 +38,7 @@ class RunResult:
     error: str | None = None
     vars: dict = field(default_factory=dict)  # name -> encoded value
     missing: list[str] = field(default_factory=list)
+    checks: list[dict] = field(default_factory=list)  # from a behaviour checker
 
 
 @dataclass
@@ -49,9 +50,9 @@ class GradeResult:
     error: str | None = None
 
 
-def execute(setup: list[str], code: str, extract: list[str]) -> RunResult:
+def execute(setup: list[str], code: str, extract: list[str], checker: str = "") -> RunResult:
     """Run `code` (after best-effort `setup`) in the sandboxed subprocess."""
-    job = {"setup": setup, "code": code, "extract": extract}
+    job = {"setup": setup, "code": code, "extract": extract, "checker": checker}
     with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as fh:
         json.dump(job, fh)
         job_path = fh.name
@@ -83,6 +84,7 @@ def execute(setup: list[str], code: str, extract: list[str]) -> RunResult:
         error=data["error"],
         vars=data["vars"],
         missing=data["missing"],
+        checks=data.get("checks", []),
     )
 
 
@@ -136,11 +138,13 @@ def grade(module: Module, exercise: Exercise, student_code: str) -> GradeResult:
         )
 
     setup = module.setup_code(exercise.cell_index)
-    student = execute(setup, student_code, _extract_names(exercise))
+    student = execute(setup, student_code, _extract_names(exercise), exercise.checker_code)
 
     checks: list[CheckResult] = []
-    if not student.ok:
-        # Their code raised — report it and fail every check.
+    has_behaviour = any(c.kind == "behaviour" for c in exercise.checks)
+    if not student.ok and not has_behaviour:
+        # Their code raised — report it and fail every check. (A behaviour
+        # checker reports the crash itself, in its own words, so skip this.)
         checks.append(CheckResult("Runs without error", ok=False,
                                   message="Your code raised an exception (see output)."))
 
@@ -162,6 +166,8 @@ def grade(module: Module, exercise: Exercise, student_code: str) -> GradeResult:
                                                   exercise.reveal))
         elif check.kind == "output_contains":
             checks.extend(feedback.output_contains(student.stdout, check.substrings))
+        elif check.kind == "behaviour":
+            checks.extend(feedback.behaviour_checks(student.checks, exercise.reveal))
 
     graded_checks = [c for c in checks if c.label != "Runs without error"] or checks
     passed_count = sum(1 for c in graded_checks if c.ok)

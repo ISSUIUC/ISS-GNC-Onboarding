@@ -24,6 +24,11 @@ Without a solution block an exercise is still fully usable: it renders as a
 "practice" cell the student can run, just with no pass/fail. This lets existing
 notebooks work untouched, and get grading later, one exercise at a time.
 
+For open-ended exercises (no single right answer) a *behaviour checker* can be
+attached instead: lead-authored Python that inspects the submission itself —
+its printed output, its variables, its AST — and reports named checks. See
+`### BEGIN CHECKER` / `#% checker:` below and AUTHORING.md.
+
 Directives (lines beginning with `#%`, stripped from what the student sees):
     #% exercise                         mark this cell as an exercise
     #% id: some-slug                    stable id (default: module-ex<N>)
@@ -31,6 +36,7 @@ Directives (lines beginning with `#%`, stripped from what the student sees):
     #% check: a, b~1e-6, c              variables to grade (optional abs tol via ~)
     #% check_output                     also require stdout to match reference
     #% check_output_contains: Liftoff!  require substrings in stdout (comma list)
+    #% checker: rocket_flight.py        behaviour checker from notebooks/checkers/
     #% points: 2                        weight for this exercise (default 1)
     #% reveal: false                    hide expected values in feedback
 """
@@ -47,6 +53,8 @@ SOLUTION_BEGIN = re.compile(r"^\s*###\s*BEGIN\s+SOLUTION\s*$", re.IGNORECASE)
 SOLUTION_END = re.compile(r"^\s*###\s*END\s+SOLUTION\s*$", re.IGNORECASE)
 STUB_BEGIN = re.compile(r"^\s*###\s*BEGIN\s+STUB\s*$", re.IGNORECASE)
 STUB_END = re.compile(r"^\s*###\s*END\s+STUB\s*$", re.IGNORECASE)
+CHECKER_BEGIN = re.compile(r"^\s*###\s*BEGIN\s+CHECKER\s*$", re.IGNORECASE)
+CHECKER_END = re.compile(r"^\s*###\s*END\s+CHECKER\s*$", re.IGNORECASE)
 DIRECTIVE = re.compile(r"^\s*#%\s*([a-zA-Z_]+)\s*(?::\s*(.*))?$")
 PLACEHOLDER = re.compile(r"write\b.*\bhere", re.IGNORECASE)
 HEADING = re.compile(r"^#{1,6}\s*(.*)$")
@@ -58,7 +66,7 @@ EMOJI_PREFIX = re.compile(r"^[^\w(]+")
 class Check:
     """One thing to verify about a student's submission."""
 
-    kind: str  # "vars" | "output" | "output_contains"
+    kind: str  # "vars" | "output" | "output_contains" | "behaviour"
     variables: list[tuple[str, float | None]] = field(default_factory=list)
     substrings: list[str] = field(default_factory=list)
 
@@ -69,6 +77,7 @@ class Exercise:
     title: str
     stub_code: str  # what the student sees / starts editing
     reference_code: str  # full solution, run to derive expected answers
+    checker_code: str = ""  # lead-authored behaviour checker (see Check "behaviour")
     checks: list[Check] = field(default_factory=list)
     points: int = 1
     reveal: bool = True
@@ -196,23 +205,27 @@ def _parse_directives(source: str) -> dict[str, str]:
     return out
 
 
-def _split_solution(source: str) -> tuple[str, str, bool]:
-    """Return (student_stub, reference_code, had_solution).
+def _split_solution(source: str) -> tuple[str, str, str, bool]:
+    """Return (student_stub, reference_code, checker_code, had_solution).
 
-    Two optional regions carve the cell into a student view and a grading view:
+    Three optional regions carve the cell into a student view and a grading view:
 
     * `### BEGIN SOLUTION ... ### END SOLUTION` — reference only (the answer;
       hidden from the student).
     * `### BEGIN STUB ... ### END STUB` — student only (buggy/starter code the
       student edits; not run when computing the reference answer).
+    * `### BEGIN CHECKER ... ### END CHECKER` — neither: a behaviour checker,
+      run *after* the submission to inspect what it did.
 
-    Lines outside both regions appear in both. Directive (`#%`) lines are dropped
-    from both.
+    Lines outside all three appear in both. Directive (`#%`) lines are dropped
+    from all of them.
     """
     stub_lines: list[str] = []
     ref_lines: list[str] = []
+    checker_lines: list[str] = []
     in_solution = False
     in_stub = False
+    in_checker = False
     had_solution = False
     for line in source.splitlines():
         if DIRECTIVE.match(line):
@@ -230,7 +243,15 @@ def _split_solution(source: str) -> tuple[str, str, bool]:
         if STUB_END.match(line):
             in_stub = False
             continue
-        if in_solution:
+        if CHECKER_BEGIN.match(line):
+            in_checker = True
+            continue
+        if CHECKER_END.match(line):
+            in_checker = False
+            continue
+        if in_checker:
+            checker_lines.append(line)  # grading harness only
+        elif in_solution:
             ref_lines.append(line)  # reference only
         elif in_stub:
             stub_lines.append(line)  # student only
@@ -240,11 +261,12 @@ def _split_solution(source: str) -> tuple[str, str, bool]:
 
     stub = "\n".join(stub_lines).rstrip()
     reference = "\n".join(ref_lines).rstrip()
+    checker = "\n".join(checker_lines).rstrip()
     # If stripping the solution left a truly empty cell, give the student a
     # prompt. (A cell that already has a "# Write ... here" comment is kept.)
     if not stub.strip():
         stub = "# Write your code here"
-    return stub, reference, had_solution
+    return stub, reference, checker, had_solution
 
 
 def _parse_checks(directives: dict[str, str]) -> list[Check]:
@@ -272,6 +294,27 @@ def _parse_checks(directives: dict[str, str]) -> list[Check]:
         if subs:
             checks.append(Check(kind="output_contains", substrings=subs))
     return checks
+
+
+def _missing_checker(name: str) -> str:
+    """Stand-in checker that fails loudly, so a typo can't silently un-grade."""
+    message = f"Checker file {name!r} was not found — tell the GNC lead."
+    return f"def check(ctx):\n    ctx.require('Automatic checks', False, {message!r})\n"
+
+
+def _load_checker(notebook: Path, name: str) -> str:
+    """Read a behaviour checker named by `#% checker:`.
+
+    Looked up next to the notebook, first in `checkers/` then alongside it, so
+    a big checker can live as a normal (testable) .py file instead of bloating
+    the notebook cell.
+    """
+    candidates = [notebook.parent / "checkers" / name, notebook.parent / name]
+    for path in candidates:
+        if path.is_file():
+            return path.read_text(encoding="utf-8")
+    print(f"[engine] {notebook.name}: checker {name!r} not found")
+    return _missing_checker(name)
 
 
 def _cell_output_text(cell: dict) -> str:
@@ -322,8 +365,12 @@ def parse_notebook(path: str | Path) -> Module:
         if _looks_like_exercise(source, prev_markdown):
             ex_counter += 1
             directives = _parse_directives(source)
-            stub, reference, _ = _split_solution(source)
+            stub, reference, checker, _ = _split_solution(source)
+            if directives.get("checker"):
+                checker = _load_checker(path, directives["checker"].strip())
             checks = _parse_checks(directives)
+            if checker.strip():
+                checks.append(Check(kind="behaviour"))
             ex_id = directives.get("id") or f"{module_id}-ex{ex_counter}"
             ex_title = directives.get("title") or _exercise_title(prev_markdown, ex_counter)
             points = 1
@@ -338,6 +385,7 @@ def parse_notebook(path: str | Path) -> Module:
                 title=ex_title,
                 stub_code=stub,
                 reference_code=reference,
+                checker_code=checker,
                 checks=checks,
                 points=points,
                 reveal=reveal,
