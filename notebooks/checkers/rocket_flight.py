@@ -23,15 +23,27 @@ import re
 # Variable names we accept for each quantity. `ctx.defined` only looks at names
 # the student's own code assigns, so short physics shorthands are safe here —
 # they can't collide with leftovers from earlier notebook cells.
-ALTITUDE_VARS = ("altitude", "alt", "height", "starting_altitude", "current_altitude",
+# Order matters: the first match wins, so the canonical name leads and the
+# single letters trail.
+ALTITUDE_VARS = ("altitude", "alt", "height", "elevation",
+                 "starting_altitude", "start_altitude", "current_altitude",
+                 "starting_height", "start_height", "current_height",
+                 "rocket_altitude", "rocket_height", "altitude_m", "alt_m",
+                 "distance", "position", "pos",
                  "h", "y")
-VELOCITY_VARS = ("velocity", "vertical_velocity", "vel", "speed", "climb_rate", "climb",
+VELOCITY_VARS = ("velocity", "vertical_velocity", "vel", "speed", "vertical_speed",
+                 "climb_rate", "climb_speed", "climb", "climbrate",
+                 "ascent_rate", "ascent_speed", "ascent", "rise_rate", "rise",
+                 "rocket_speed", "rocket_velocity", "velocity_mps", "start_velocity",
+                 "starting_velocity", "initial_velocity",
                  "v")
-FUEL_VARS = ("fuel", "fuel_remaining", "fuel_left", "fuel_percent", "propellant")
+FUEL_VARS = ("fuel", "fuel_remaining", "fuel_left", "fuel_percent", "fuel_percentage",
+             "fuel_pct", "fuel_level", "fuel_amount", "fuel_supply", "remaining_fuel",
+             "propellant", "propellant_remaining", "fuel_tank", "tank", "gas", "f")
 
 # Words we accept as *labels in the printed log*. Deliberately stricter than the
 # variable names: "h" would happily match "Time: 1 h".
-ALTITUDE_LABELS = ("altitude", "alt", "height", "elevation")
+ALTITUDE_LABELS = ("altitude", "alt", "height", "elevation", "distance", "position")
 FUEL_LABELS = ("fuel", "propellant")
 
 NUMBER = r"(-?\d+(?:\.\d+)?)"
