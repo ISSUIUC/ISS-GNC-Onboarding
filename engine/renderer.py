@@ -74,10 +74,10 @@ def highlight(code: str) -> str:
 
 def pygments_css() -> str:
     """Token colours for both themes, scoped to the <html data-theme> attribute."""
-    light = HtmlFormatter(style="default").get_style_defs(
+    light = HtmlFormatter(style="gruvbox-light").get_style_defs(
         ':root[data-theme="light"] .highlight'
     )
-    dark = HtmlFormatter(style="monokai").get_style_defs(
+    dark = HtmlFormatter(style="nord").get_style_defs(
         ':root[data-theme="dark"] .highlight'
     )
     return f"{light}\n{dark}"
