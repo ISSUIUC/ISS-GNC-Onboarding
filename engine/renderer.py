@@ -73,7 +73,14 @@ def highlight(code: str) -> str:
 
 
 def pygments_css() -> str:
-    return HtmlFormatter().get_style_defs(".highlight")
+    """Token colours for both themes, scoped to the <html data-theme> attribute."""
+    light = HtmlFormatter(style="default").get_style_defs(
+        ':root[data-theme="light"] .highlight'
+    )
+    dark = HtmlFormatter(style="monokai").get_style_defs(
+        ':root[data-theme="dark"] .highlight'
+    )
+    return f"{light}\n{dark}"
 
 
 def render_blocks(module: Module) -> list[dict]:

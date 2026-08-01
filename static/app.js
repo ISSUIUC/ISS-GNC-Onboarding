@@ -18,11 +18,33 @@ function ensureStudent(force) {
   if (label) label.textContent = currentStudent() || "guest";
 }
 
+/* ---- light / dark theme (the <head> script applies it before first paint) ---- */
+const editors = [];
+
+function currentTheme() {
+  return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+}
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  localStorage.setItem("gnc_theme", theme);
+  const btn = document.getElementById("theme-toggle");
+  if (btn) {
+    btn.textContent = theme === "dark" ? "☀️ Light" : "🌙 Dark";
+    btn.setAttribute("aria-pressed", theme === "dark" ? "true" : "false");
+  }
+  editors.forEach((cm) => cm.setOption("theme", theme === "dark" ? "material-darker" : "default"));
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   ensureStudent(false);
   const changeBtn = document.getElementById("change-student");
   if (changeBtn) changeBtn.addEventListener("click", () => { ensureStudent(true); location.reload(); });
+
+  const themeBtn = document.getElementById("theme-toggle");
+  if (themeBtn) themeBtn.addEventListener("click", () => applyTheme(currentTheme() === "dark" ? "light" : "dark"));
+
   initExercises();
+  applyTheme(currentTheme());
 });
 
 /* ---- exercise editors ---- */
@@ -35,11 +57,12 @@ function initExercises() {
     const textarea = ex.querySelector(".editor");
     const cm = CodeMirror.fromTextArea(textarea, {
       mode: "python",
-      theme: "material-darker",
+      theme: currentTheme() === "dark" ? "material-darker" : "default",
       lineNumbers: true,
       indentUnit: 4,
       viewportMargin: Infinity,
     });
+    editors.push(cm);
 
     const exId = ex.dataset.exercise;
     const graded = ex.dataset.graded === "1";
