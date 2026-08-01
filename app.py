@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from flask import Flask, abort, jsonify, render_template, request
+from flask import Flask, abort, jsonify, redirect, render_template, request, url_for
 
 from engine import discover_modules, grader
 from engine.progress import Progress
@@ -42,6 +42,23 @@ def _student() -> str:
     return (request.cookies.get("student") or "").strip() or "anonymous"
 
 
+def _gating() -> dict:
+    """Per-module {done, total, complete, unlocked, blocked_by} for this student."""
+    return progress.module_counts(_student(), _ordered_modules())
+
+
+def _locked(module_id: str) -> str | None:
+    """Title of the module blocking `module_id`, or None if it's open."""
+    status = _gating().get(module_id)
+    if status is None or status["unlocked"]:
+        return None
+    return status["blocked_by"] or "the previous module"
+
+
+def _lock_message(blocker: str) -> str:
+    return f"This module is locked. Finish “{blocker}” first."
+
+
 @app.context_processor
 def inject_globals() -> dict:
     return {"pygments_css": pygments_css()}
@@ -50,9 +67,17 @@ def inject_globals() -> dict:
 @app.route("/")
 def index():
     modules = _ordered_modules()
-    counts = progress.module_counts(_student(), modules)
+    counts = _gating()
+    # ?locked=<id> comes from a redirect off a module the student can't open yet.
+    requested = _modules.get(request.args.get("locked", ""))
+    notice = None
+    if requested is not None and not counts[requested.id]["unlocked"]:
+        notice = {
+            "module": requested.title,
+            "blocker": counts[requested.id]["blocked_by"],
+        }
     return render_template(
-        "index.html", modules=modules, counts=counts, student=_student()
+        "index.html", modules=modules, counts=counts, student=_student(), locked_notice=notice
     )
 
 
@@ -61,6 +86,9 @@ def module_page(module_id: str):
     module = _modules.get(module_id)
     if module is None:
         abort(404)
+    if _locked(module_id):
+        # Direct-URL access to a module the student hasn't unlocked yet.
+        return redirect(url_for("index", locked=module_id))
     blocks = render_blocks(module)
     done = progress.completed(_student(), module_id)
     return render_template(
@@ -80,6 +108,8 @@ def _lookup():
 @app.post("/run")
 def run():
     module, exercise, data = _lookup()
+    if (blocker := _locked(module.id)) is not None:
+        return jsonify(ok=False, stdout="", error=_lock_message(blocker)), 403
     result = grader.run_only(module, exercise, data.get("code", ""))
     return jsonify(ok=result.ok, stdout=result.stdout, error=result.error)
 
@@ -87,6 +117,15 @@ def run():
 @app.post("/grade")
 def grade():
     module, exercise, data = _lookup()
+    if (blocker := _locked(module.id)) is not None:
+        return jsonify(
+            graded=exercise.graded,
+            passed=False,
+            score=0.0,
+            stdout="",
+            error=_lock_message(blocker),
+            checks=[],
+        ), 403
     result = grader.grade(module, exercise, data.get("code", ""))
     if result.passed:
         progress.mark(_student(), module.id, exercise.id, result.score)

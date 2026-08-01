@@ -196,17 +196,24 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 22px 90px; }
 .hero p { color: var(--muted); max-width: 640px; }
 
 .module-list { list-style: none; padding: 0; margin: 30px 0 0; display: grid; gap: 12px; }
-.module-card a {
+.module-card .card-face {
   display: flex; align-items: center; gap: 18px;
   padding: 18px 20px;
   background: linear-gradient(180deg, var(--panel), var(--panel-2));
   border: 1px solid var(--line); border-radius: var(--radius);
   color: var(--ink); transition: border-color .15s, transform .15s, box-shadow .15s;
 }
-.module-card a:hover {
+.module-card a.card-face:hover {
   border-color: var(--accent); transform: translateY(-1px); text-decoration: none;
   box-shadow: 0 2px 0 var(--accent-tint);
 }
+/* Locked: dimmed, flat, and inert — it is a <span>, so there is no click target. */
+.module-card.locked .card-face {
+  background: var(--panel-2); border-style: dashed;
+  opacity: .6; cursor: not-allowed;
+}
+.module-card.locked .name,
+.module-card.locked .index { color: var(--muted); }
 .module-card .index {
   font: 400 13px/1 var(--pixel); color: var(--accent-3); opacity: .85; min-width: 38px;
 }
@@ -216,7 +223,13 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 22px 90px; }
 .badge { font: 400 9px/1.4 var(--pixel); padding: 6px 9px; border-radius: 6px; white-space: nowrap; }
 .badge.done { background: var(--ok-tint); color: var(--ok); }
 .badge.partial { background: var(--saffron-tint); color: var(--warn); }
+.badge.locked { background: var(--panel); color: var(--muted); border: 1px solid var(--line); }
 .empty { color: var(--muted); }
+.notice {
+  margin: 22px 0 0; padding: 12px 14px; font-size: 14px;
+  background: var(--saffron-tint); color: var(--warn);
+  border: 1px solid var(--line); border-radius: var(--radius);
+}
 
 /* ---- module page ---- */
 .back { font-size: 14px; color: var(--muted); }

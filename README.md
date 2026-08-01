@@ -35,7 +35,7 @@ Open <http://127.0.0.1:5000>, type your name once, and work through the modules.
 | Renderer | `engine/renderer.py` | Markdown → HTML with LaTeX (MathJax) and Pygments-highlighted code. |
 | Runner | `engine/runner.py` | Execute student code in a **separate process** with a timeout, capture output + variables. |
 | Grader | `engine/grader.py`, `engine/feedback.py` | Compare the student's variables/output to the reference solution with tolerances. |
-| Progress | `engine/progress.py` | Per-student completion, saved to `data/progress.json`. |
+| Progress | `engine/progress.py` | Per-student completion + module unlocking, saved to `data/progress.json`. |
 | Web app | `app.py`, `templates/`, `static/` | Serve modules, run/grade endpoints. |
 
 An exercise with no reference solution still works — it renders as a **practice**
@@ -47,6 +47,12 @@ See **[AUTHORING.md](AUTHORING.md)** for the (small) notebook convention.
 Drop a new `.ipynb` into `notebooks/` and restart the server. Modules are
 listed in filename order. Mark exercises and (optionally) add graders following
 [AUTHORING.md](AUTHORING.md).
+
+Modules unlock **in that same filename order**: the first is always open, and
+module *N* stays locked until every graded exercise in modules *1..N-1* is
+passed. A module with no graded exercises can't gate anything, so it never
+blocks the chain. Prefix filenames (`01_`, `02_`, …) if you want the sequence
+to be explicit.
 
 ## Security note
 
