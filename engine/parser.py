@@ -156,17 +156,27 @@ def _clean_text(text: str) -> str:
     return text[:80]
 
 
-def _clean_heading(md: str) -> str:
-    """Pull a short human title out of a markdown cell's first heading/line."""
-    for line in md.splitlines():
-        line = line.strip()
-        if not line:
+def _take_title(md: str) -> tuple[str, str]:
+    """Pull a short human title out of a markdown cell, and the source without it.
+
+    Notebooks open with `# Some Title`, which the module page already shows in
+    its own heading — so the title line is *removed* from the cell it came from,
+    otherwise the reader sees it twice. A cell that opens with prose still names
+    the module, but that prose stays where it is.
+    """
+    lines = md.splitlines()
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped:
             continue
-        m = HEADING.match(line)
-        text = _clean_text(m.group(1) if m else line)
-        if text:
-            return text
-    return ""
+        m = HEADING.match(stripped)
+        if m is None:
+            return _clean_text(stripped), md
+        text = _clean_text(m.group(1))
+        if not text:
+            return "", md
+        return text, "\n".join(lines[i + 1:]).lstrip("\n")
+    return "", md
 
 
 def _exercise_title(prev_markdown: str, number: int) -> str:
@@ -451,14 +461,16 @@ def parse_notebook(path: str | Path) -> Module:
         source = "".join(cell.get("source", []))
 
         if cell_type == "markdown":
+            body = source
             if not title_found:
-                h = _clean_heading(source)
+                h, body = _take_title(source)
                 if h:
                     title = h
                     title_found = True
-            block = Block(kind="markdown", source=source)
-            block.cell_index = cell_index
-            blocks.append(block)
+            if body.strip():  # a cell that was *only* the title has nothing left
+                block = Block(kind="markdown", source=body)
+                block.cell_index = cell_index
+                blocks.append(block)
             prev_markdown = source
             continue
 
