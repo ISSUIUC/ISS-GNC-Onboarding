@@ -44,6 +44,8 @@ Directives (lines beginning with `#%`, stripped from what the student sees):
     #% check_output_contains: Liftoff!  require substrings in stdout (comma list)
     #% checker: rocket_flight.py        behaviour checker from notebooks/checkers/
                                         (`file.py:func` picks one function out of it)
+    #% checker: silence_the_ifs         ...or name a function in this notebook's
+                                        own checker module (no .py = a function)
     #% points: 2                        weight for this exercise (default 1)
     #% reveal: false                    hide expected values in feedback
 """
@@ -361,6 +363,33 @@ def _load_checker(notebook: Path, spec: str) -> str:
     return _bind(source, function)
 
 
+def _named_checker(notebook: Path, module_checker, name: str) -> str:
+    """Bind `#% checker: <name>` to a function in the notebook's checker module.
+
+    The point of the bare-name form is that the cell says, in the cell, exactly
+    which function grades it — so a checker never has to be found by counting
+    cells, and reordering the notebook can't quietly re-point it. Unlike
+    `#% id:`, the name is free to be descriptive: it isn't the progress key, so
+    renaming it doesn't reset anyone's completed work.
+
+    `#% checker: silence_the_ifs` accepts either `silence_the_ifs` or
+    `check_silence_the_ifs` as the function name, whichever the module defines.
+    """
+    if module_checker is None:
+        print(f"[engine] {notebook.name}: no checkers/{notebook.stem.lower()}.py "
+              f"for checker {name!r}")
+        return _broken_checker(
+            f"Checker {name!r} needs a checkers/{notebook.stem.lower()}.py, "
+            "which doesn't exist")
+    source, functions = module_checker
+    for candidate in (name, f"check_{name}"):
+        if candidate in functions:
+            return _bind(source, candidate)
+    print(f"[engine] {notebook.name}: checker module defines no {name!r}")
+    return _broken_checker(
+        f"The checker module defines no {name}() (nor check_{name}())")
+
+
 def _module_checker(notebook: Path, module_id: str) -> tuple[str, list[str]] | None:
     """The notebook's own checker file, `checkers/<notebook>.py`, if it exists.
 
@@ -441,10 +470,12 @@ def parse_notebook(path: str | Path) -> Module:
             directives = _parse_directives(source)
             ex_id = directives.get("id") or f"{module_id}-ex{ex_counter}"
             stub, reference, checker, _ = _split_solution(source)
-            # Checker precedence: `#% checker:` file, then an inline
-            # `### BEGIN CHECKER` block, then the notebook's own checker module.
-            if directives.get("checker"):
-                checker = _load_checker(path, directives["checker"].strip())
+            # Checker precedence: `#% checker:` (a file, or a function named in
+            # the notebook's checker module), then an inline `### BEGIN CHECKER`
+            # block, then a function matched to this exercise's id.
+            if spec := directives.get("checker", "").strip():
+                checker = (_load_checker(path, spec) if ".py" in spec
+                           else _named_checker(path, module_checker, spec))
             if not checker.strip() and module_checker is not None:
                 checker_source, functions = module_checker
                 for candidate in _checker_candidates(module_id, ex_id, ex_counter):

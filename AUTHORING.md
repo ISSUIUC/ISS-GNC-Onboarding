@@ -109,6 +109,21 @@ and a cell with `#% id: rocket-gains` → `check_rocket_gains`. Anything else in
 the file (constants, helpers) is just shared code — it's an ordinary Python
 module you can import in a test.
 
+**The `exN` number is positional** — it's the Nth exercise cell from the top of
+the notebook, so inserting an exercise above one shifts every number below it.
+When you'd rather not think about that, name the checker in the cell:
+
+```python
+#% exercise
+#% checker: silence_the_ifs      # -> check_silence_the_ifs() in introduction.py
+```
+
+Now the cell says which function grades it, reordering can't re-point it, and
+the name can be as descriptive as you like. (`#% id:` also pins the binding, but
+it's the key student progress is stored under — renaming one resets who's
+completed that exercise. `#% checker:` has no such cost.) The `check_` prefix is
+optional in the directive: `#% checker: check_silence_the_ifs` works too.
+
 This is what upgrades a *practice* cell into a graded one: as soon as a
 `check_exN` exists, that exercise stops passing on "it ran" alone.
 
@@ -195,7 +210,8 @@ student and never run.
 | `#% check: a, b~0.001, c` | Grade these variables. `~tol` sets an absolute tolerance (default is a relative `1e-6`). |
 | `#% check_output` | Require stdout to match the reference (whitespace-lenient). |
 | `#% check_output_contains: x, y` | Require these substrings in stdout. |
-| `#% checker: rocket_flight.py` | Grade with a behaviour checker from `notebooks/checkers/`. Add `:function` to pick one out of a multi-checker file. Not needed for `checkers/<notebook>.py` — those bind by name. |
+| `#% checker: rocket_flight.py` | Grade with a behaviour checker file from `notebooks/checkers/`. Add `:function` to pick one out of a multi-checker file. |
+| `#% checker: silence_the_ifs` | No `.py` = a function in this notebook's own checker module (`check_` prefix optional). Use it to bind a checker by name instead of by cell position. |
 | `#% points: 2` | Weight for this exercise (default 1). |
 | `#% title: Dot products` | Override the exercise title. |
 | `#% id: vectors-dot` | Stable id (default `<module>-ex<N>`). Set this if you reorder cells and want progress to stick. |

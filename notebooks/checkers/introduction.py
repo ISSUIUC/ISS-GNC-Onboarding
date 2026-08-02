@@ -91,8 +91,8 @@ def check_ex2(ctx):
                 expected=str(pins), got=ctx.stdout.strip() or "(no output)")
 
 
-def check_ex6(ctx):
-    """"Modify the code below so nothing prints."
+def check_silence_the_ifs(ctx):
+    """"Modify the code below so nothing prints." (`#% checker: silence_the_ifs`)
 
     The exercise is about *conditions*: change the values the ifs test (or the
     branches they run) until none of them reaches a print. So we check both
