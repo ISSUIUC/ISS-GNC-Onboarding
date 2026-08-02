@@ -38,9 +38,48 @@ _MATH_PATTERNS = [
 ]
 
 _MD = md_lib.Markdown(
-    extensions=["fenced_code", "tables", "sane_lists", "codehilite"],
+    # nl2br because notebook authors write single newlines expecting the hard
+    # break Jupyter gives them ("Time: 1 s" / "Altitude: 50 m" on two lines).
+    extensions=["fenced_code", "tables", "sane_lists", "nl2br", "codehilite"],
     extension_configs={"codehilite": {"guess_lang": False, "css_class": "highlight"}},
 )
+
+_LIST_ITEM = re.compile(r"^ {0,3}(?:[-*+]|\d{1,9}[.)])\s+\S")
+_FENCE = re.compile(r"^ {0,3}(?:```|~~~)")
+
+
+def _space_out_lists(text: str) -> str:
+    """Insert the blank line Python-Markdown needs before a list.
+
+    CommonMark — and so the notebook editor the cells were written in — lets a
+    bullet list interrupt a paragraph. Python-Markdown does not, and swallows
+    the items into the paragraph, so the bullets collapse onto one line.
+    """
+    out: list[str] = []
+    in_fence = in_list = False
+    prev_blank = True
+    for line in text.split("\n"):
+        if _FENCE.match(line):
+            in_fence = not in_fence
+        if in_fence:
+            out.append(line)
+            continue
+        if not line.strip():
+            prev_blank = True
+            out.append(line)
+            continue
+        is_item = bool(_LIST_ITEM.match(line))
+        indented = line.startswith("  ")
+        # A blank line then unindented prose ends the list; blank lines *inside*
+        # a list (loose items, continuation paragraphs) must not.
+        if in_list and prev_blank and not is_item and not indented:
+            in_list = False
+        if is_item and not in_list and not prev_blank:
+            out.append("")
+        in_list = in_list or is_item
+        prev_blank = False
+        out.append(line)
+    return "\n".join(out)
 
 
 def render_markdown(source: str) -> str:
@@ -58,7 +97,9 @@ def render_markdown(source: str) -> str:
             text = pattern.sub(repl, text)
         return text
 
-    protected = protect(source)
+    # After protect(), so a multi-line math block can't be mistaken for prose
+    # followed by a list.
+    protected = _space_out_lists(protect(source))
     _MD.reset()
     html = _MD.convert(protected)
 
