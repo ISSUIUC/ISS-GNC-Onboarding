@@ -29,6 +29,12 @@ attached instead: lead-authored Python that inspects the submission itself —
 its printed output, its variables, its AST — and reports named checks. See
 `### BEGIN CHECKER` / `#% checker:` below and AUTHORING.md.
 
+Checkers can also live *per notebook*: `notebooks/checkers/<notebook>.py` is
+picked up automatically, and each `check_<exercise>` function in it is bound to
+the matching exercise with no directive in the cell at all. That keeps one
+notebook's small checks together in one ordinary, testable .py file — see
+`_module_checker`.
+
 Directives (lines beginning with `#%`, stripped from what the student sees):
     #% exercise                         mark this cell as an exercise
     #% id: some-slug                    stable id (default: module-ex<N>)
@@ -37,12 +43,14 @@ Directives (lines beginning with `#%`, stripped from what the student sees):
     #% check_output                     also require stdout to match reference
     #% check_output_contains: Liftoff!  require substrings in stdout (comma list)
     #% checker: rocket_flight.py        behaviour checker from notebooks/checkers/
+                                        (`file.py:func` picks one function out of it)
     #% points: 2                        weight for this exercise (default 1)
     #% reveal: false                    hide expected values in feedback
 """
 
 from __future__ import annotations
 
+import ast
 import json
 import re
 from dataclasses import dataclass, field
@@ -57,6 +65,7 @@ CHECKER_BEGIN = re.compile(r"^\s*###\s*BEGIN\s+CHECKER\s*$", re.IGNORECASE)
 CHECKER_END = re.compile(r"^\s*###\s*END\s+CHECKER\s*$", re.IGNORECASE)
 DIRECTIVE = re.compile(r"^\s*#%\s*([a-zA-Z_]+)\s*(?::\s*(.*))?$")
 PLACEHOLDER = re.compile(r"write\b.*\bhere", re.IGNORECASE)
+CHECK_DEF = re.compile(r"^def\s+(check_\w+)\s*\(", re.MULTILINE)
 HEADING = re.compile(r"^#{1,6}\s*(.*)$")
 # strip a leading emoji / symbol run (and following spaces) from a heading
 EMOJI_PREFIX = re.compile(r"^[^\w(]+")
@@ -296,25 +305,89 @@ def _parse_checks(directives: dict[str, str]) -> list[Check]:
     return checks
 
 
-def _missing_checker(name: str) -> str:
+def _broken_checker(reason: str) -> str:
     """Stand-in checker that fails loudly, so a typo can't silently un-grade."""
-    message = f"Checker file {name!r} was not found — tell the GNC lead."
+    message = f"{reason} — tell the GNC lead."
     return f"def check(ctx):\n    ctx.require('Automatic checks', False, {message!r})\n"
 
 
-def _load_checker(notebook: Path, name: str) -> str:
-    """Read a behaviour checker named by `#% checker:`.
+def _bind(source: str, function: str) -> str:
+    """Make `function` the `check(ctx)` entry point the runner calls."""
+    return f"{source.rstrip()}\n\n\ncheck = {function}\n"
 
-    Looked up next to the notebook, first in `checkers/` then alongside it, so
-    a big checker can live as a normal (testable) .py file instead of bloating
-    the notebook cell.
+
+def _checker_functions(source: str) -> list[str]:
+    """Top-level function names in a checker file, without importing it.
+
+    A file that doesn't even parse still yields its `check_*` names (found
+    textually) so the exercise stays *bound* to it: the runner then reports the
+    SyntaxError as a broken checker, rather than the cell silently un-grading.
     """
-    candidates = [notebook.parent / "checkers" / name, notebook.parent / name]
-    for path in candidates:
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return CHECK_DEF.findall(source)
+    return [n.name for n in tree.body
+            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
+
+
+def _checker_path(notebook: Path, name: str) -> Path | None:
+    """Locate a checker file: first in `checkers/`, then next to the notebook."""
+    for path in (notebook.parent / "checkers" / name, notebook.parent / name):
         if path.is_file():
-            return path.read_text(encoding="utf-8")
-    print(f"[engine] {notebook.name}: checker {name!r} not found")
-    return _missing_checker(name)
+            return path
+    return None
+
+
+def _load_checker(notebook: Path, spec: str) -> str:
+    """Read the behaviour checker named by `#% checker: file.py[:function]`.
+
+    A big checker lives as a normal (testable) .py file instead of bloating the
+    notebook cell. The optional `:function` suffix picks one checker out of a
+    file that holds several — e.g. `#% checker: introduction.py:check_ex6`.
+    """
+    name, _, function = spec.partition(":")
+    name, function = name.strip(), function.strip()
+    path = _checker_path(notebook, name)
+    if path is None:
+        print(f"[engine] {notebook.name}: checker {name!r} not found")
+        return _broken_checker(f"Checker file {name!r} was not found")
+    source = path.read_text(encoding="utf-8")
+    if not function:
+        return source
+    if function not in _checker_functions(source):
+        print(f"[engine] {notebook.name}: {name} has no function {function!r}")
+        return _broken_checker(f"Checker {name!r} defines no {function}()")
+    return _bind(source, function)
+
+
+def _module_checker(notebook: Path, module_id: str) -> tuple[str, list[str]] | None:
+    """The notebook's own checker file, `checkers/<notebook>.py`, if it exists.
+
+    This is the modular alternative to one file (or one inline block) per
+    exercise: put every small checker for a notebook in one module, name each
+    one after the exercise it grades, and the cells need no directive at all.
+    Returns (source, function names defined in it).
+    """
+    for name in {f"{module_id}.py", f"{notebook.stem}.py"}:
+        path = _checker_path(notebook, name)
+        if path is not None:
+            source = path.read_text(encoding="utf-8")
+            return source, _checker_functions(source)
+    return None
+
+
+def _checker_candidates(module_id: str, exercise_id: str, number: int) -> list[str]:
+    """Function names that would grade this exercise, best match first.
+
+    `introduction-ex6` is graded by `check_ex6` (or the fully qualified
+    `check_introduction_ex6`); an exercise given `#% id: gains` by `check_gains`.
+    """
+    suffix = (exercise_id[len(module_id) + 1:]
+              if exercise_id.startswith(f"{module_id}-") else exercise_id)
+    names = [f"check_{re.sub(r'\\W+', '_', s)}" for s in (suffix, exercise_id)]
+    names.append(f"check_ex{number}")
+    return list(dict.fromkeys(names))
 
 
 def _cell_output_text(cell: dict) -> str:
@@ -335,6 +408,7 @@ def parse_notebook(path: str | Path) -> Module:
     path = Path(path)
     nb = json.loads(path.read_text(encoding="utf-8"))
     module_id = _slugify(path.stem)
+    module_checker = _module_checker(path, module_id)
 
     blocks: list[Block] = []
     title = path.stem.replace("_", " ")
@@ -365,13 +439,21 @@ def parse_notebook(path: str | Path) -> Module:
         if _looks_like_exercise(source, prev_markdown):
             ex_counter += 1
             directives = _parse_directives(source)
+            ex_id = directives.get("id") or f"{module_id}-ex{ex_counter}"
             stub, reference, checker, _ = _split_solution(source)
+            # Checker precedence: `#% checker:` file, then an inline
+            # `### BEGIN CHECKER` block, then the notebook's own checker module.
             if directives.get("checker"):
                 checker = _load_checker(path, directives["checker"].strip())
+            if not checker.strip() and module_checker is not None:
+                checker_source, functions = module_checker
+                for candidate in _checker_candidates(module_id, ex_id, ex_counter):
+                    if candidate in functions:
+                        checker = _bind(checker_source, candidate)
+                        break
             checks = _parse_checks(directives)
             if checker.strip():
                 checks.append(Check(kind="behaviour"))
-            ex_id = directives.get("id") or f"{module_id}-ex{ex_counter}"
             ex_title = directives.get("title") or _exercise_title(prev_markdown, ex_counter)
             points = 1
             if directives.get("points"):
