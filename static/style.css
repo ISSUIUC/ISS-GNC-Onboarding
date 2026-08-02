@@ -230,6 +230,8 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 22px 90px; }
   background: var(--saffron-tint); color: var(--warn);
   border: 1px solid var(--line); border-radius: var(--radius);
 }
+.notice.admin-notice { background: var(--accent-tint); color: var(--accent); }
+#admin-toggle[data-admin="1"] { color: var(--accent-2); font-weight: 600; }
 
 /* ---- module page ---- */
 .back { font-size: 14px; color: var(--muted); }

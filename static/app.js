@@ -18,6 +18,35 @@ function ensureStudent(force) {
   if (label) label.textContent = currentStudent() || "guest";
 }
 
+/* ---- admin override (server checks the code; we just carry the answer) ---- */
+async function setAdmin(body) {
+  const res = await fetch("/admin", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return res.json();
+}
+
+async function toggleAdmin(isOn) {
+  if (isOn) {
+    await setAdmin({ off: true });
+    location.reload();
+    return;
+  }
+  const code = (window.prompt("Enter the admin code to unlock all modules:") || "").trim();
+  if (!code) return;
+  let r;
+  try {
+    r = await setAdmin({ code });
+  } catch (e) {
+    window.alert("Could not reach the server.");
+    return;
+  }
+  if (r.admin) location.reload();
+  else window.alert(r.error || "Incorrect admin code.");
+}
+
 /* ---- light / dark theme (the <head> script applies it before first paint) ---- */
 const editors = [];
 
@@ -39,6 +68,11 @@ document.addEventListener("DOMContentLoaded", () => {
   ensureStudent(false);
   const changeBtn = document.getElementById("change-student");
   if (changeBtn) changeBtn.addEventListener("click", () => { ensureStudent(true); location.reload(); });
+
+  const adminBtn = document.getElementById("admin-toggle");
+  if (adminBtn) adminBtn.addEventListener("click", () => toggleAdmin(adminBtn.dataset.admin === "1"));
+  const adminOff = document.getElementById("admin-off");
+  if (adminOff) adminOff.addEventListener("click", () => toggleAdmin(true));
 
   const themeBtn = document.getElementById("theme-toggle");
   if (themeBtn) themeBtn.addEventListener("click", () => applyTheme(currentTheme() === "dark" ? "light" : "dark"));

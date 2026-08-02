@@ -87,7 +87,34 @@ and `check_output_contains` is too weak (three bare `print`s pass it). For these
 write a **behaviour checker**: your own Python that inspects the submission and
 reports named checks.
 
-Point the exercise at a file in `notebooks/checkers/`:
+### One checker file per notebook (the usual way)
+
+Most checkers are five lines, and a notebook has several. Put them all in
+**`notebooks/checkers/<notebook>.py`** — one function per exercise, named after
+it — and the cells need **no directive at all**:
+
+```python
+# notebooks/checkers/introduction.py
+def check_ex1(ctx):                     # grades introduction-ex1
+    ctx.require("The message is your own", ctx.stdout.strip() != "Hello GNC Team!",
+                "Change the text inside the quotation marks.")
+
+def check_ex6(ctx):                     # grades introduction-ex6
+    ctx.require("Nothing is printed", not ctx.stdout.strip(), "Your code still prints.")
+```
+
+The file name matches the notebook (`Introduction.ipynb` → `introduction.py`),
+and the function name matches the exercise id: `introduction-ex6` → `check_ex6`,
+and a cell with `#% id: rocket-gains` → `check_rocket_gains`. Anything else in
+the file (constants, helpers) is just shared code — it's an ordinary Python
+module you can import in a test.
+
+This is what upgrades a *practice* cell into a graded one: as soon as a
+`check_exN` exists, that exercise stops passing on "it ran" alone.
+
+### One checker file per exercise
+
+When a single checker gets big, give it its own file and point the cell at it:
 
 ```python
 #% exercise
@@ -96,6 +123,9 @@ Point the exercise at a file in `notebooks/checkers/`:
 ...                     # still worth having: it's run as setup for later cells
 ### END SOLUTION
 ```
+
+`#% checker: shared.py:check_gains` picks one function out of a file that holds
+several — handy when two notebooks share a checker.
 
 Or write it inline for something short (the region is invisible to the student
 and never runs as their code):
@@ -137,6 +167,9 @@ if not ctx.require("Prints a flight log", ctx.lines, "Nothing was printed."):
     return
 ```
 
+When an exercise has more than one of these, the most specific wins:
+`#% checker:` file → inline `### BEGIN CHECKER` → the notebook's checker module.
+
 `notebooks/checkers/rocket_flight.py` is the worked example (written up in
 `notebooks/checkers/rocket_flight.md`): it reads the
 altitude and fuel numbers back out of the student's printed log and re-flies the
@@ -146,9 +179,10 @@ from it worth copying — judge ambiguous cases in the student's favour, and say
 in the prompt whatever your checker relies on (there, that the numbers are
 labelled).
 
-Guardrails: a checker that crashes, or a `#% checker:` filename that doesn't
-exist, shows the student one failed "Automatic checks" row telling them to
-report it — it never silently marks the exercise ungraded.
+Guardrails: a checker that crashes, a `#% checker:` filename that doesn't exist,
+or a checker file with a syntax error shows the student one failed "Automatic
+checks" row telling them to report it — it never silently marks the exercise
+ungraded.
 
 ## All directives
 
@@ -161,7 +195,7 @@ student and never run.
 | `#% check: a, b~0.001, c` | Grade these variables. `~tol` sets an absolute tolerance (default is a relative `1e-6`). |
 | `#% check_output` | Require stdout to match the reference (whitespace-lenient). |
 | `#% check_output_contains: x, y` | Require these substrings in stdout. |
-| `#% checker: rocket_flight.py` | Grade with a behaviour checker from `notebooks/checkers/`. |
+| `#% checker: rocket_flight.py` | Grade with a behaviour checker from `notebooks/checkers/`. Add `:function` to pick one out of a multi-checker file. Not needed for `checkers/<notebook>.py` — those bind by name. |
 | `#% points: 2` | Weight for this exercise (default 1). |
 | `#% title: Dot products` | Override the exercise title. |
 | `#% id: vectors-dot` | Stable id (default `<module>-ex<N>`). Set this if you reorder cells and want progress to stick. |
@@ -193,5 +227,10 @@ The comparison adapts to the reference value's type:
   or inside the exercise's own starter code.
 - Preview your work: `uv run python app.py`, then open the module. Editing a
   notebook needs a server restart to re-read it.
-- An exercise with no solution is still useful — it's a runnable practice cell.
-  Add grading whenever you're ready.
+- An exercise with no solution and no checker is still useful — it's a runnable
+  practice cell, marked complete once it runs without an error. Add a
+  `check_exN` to the notebook's checker module whenever you're ready for it to
+  be graded properly; the cell itself doesn't change.
+- Checker modules are plain Python — `uv run python -m pytest` over them, or
+  just import one and call `check(ctx)` with a fake ctx, if a checker gets
+  hairy enough to be worth a test.

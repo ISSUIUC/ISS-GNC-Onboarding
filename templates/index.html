@@ -10,6 +10,13 @@
      exercise in this one.</p>
 </section>
 
+{% if admin %}
+<p class="notice admin-notice">
+  🔓 Admin override active — every module is unlocked. Progress is still tracked
+  normally. <button id="admin-off" class="link-btn" type="button">turn off</button>
+</p>
+{% endif %}
+
 {% if locked_notice %}
 <p class="notice locked-notice">
   🔒 “{{ locked_notice.module }}” is locked — finish “{{ locked_notice.blocker }}” to unlock it.

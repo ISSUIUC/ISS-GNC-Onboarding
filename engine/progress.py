@@ -50,7 +50,7 @@ class Progress:
     def completed(self, student: str, module_id: str) -> set[str]:
         return set(self._read().get(student, {}).get(module_id, {}).keys())
 
-    def module_counts(self, student: str, modules) -> dict[str, dict]:
+    def module_counts(self, student: str, modules, unlock_all: bool = False) -> dict[str, dict]:
         """Return {module_id: {done, total, complete, unlocked, blocked_by}}.
 
         Modules unlock strictly in order: the first is always open, and module N
@@ -60,6 +60,9 @@ class Progress:
 
         A module with no graded exercises can't be "completed" by definition, so
         it counts as complete and never blocks the chain.
+
+        `unlock_all` is the admin override: progress is still counted exactly the
+        same, but every module reports as unlocked with no blocker.
         """
         done_map = self._read().get(student, {})
         out: dict[str, dict] = {}
@@ -73,8 +76,8 @@ class Progress:
                 "done": done,
                 "total": len(graded),
                 "complete": complete,
-                "unlocked": blocker is None,
-                "blocked_by": blocker,
+                "unlocked": unlock_all or blocker is None,
+                "blocked_by": None if unlock_all else blocker,
             }
             if blocker is None and not complete:
                 blocker = module.title

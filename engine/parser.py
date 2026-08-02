@@ -385,7 +385,7 @@ def _checker_candidates(module_id: str, exercise_id: str, number: int) -> list[s
     """
     suffix = (exercise_id[len(module_id) + 1:]
               if exercise_id.startswith(f"{module_id}-") else exercise_id)
-    names = [f"check_{re.sub(r'\\W+', '_', s)}" for s in (suffix, exercise_id)]
+    names = ["check_" + re.sub(r"\W+", "_", s) for s in (suffix, exercise_id)]
     names.append(f"check_ex{number}")
     return list(dict.fromkeys(names))
 

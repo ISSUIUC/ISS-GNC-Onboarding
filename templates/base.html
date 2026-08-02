@@ -48,6 +48,12 @@
     <div class="who">
       <span id="student-label"></span>
       <button id="change-student" class="link-btn" type="button">change</button>
+      <button id="admin-toggle" class="link-btn" type="button"
+              data-admin="{{ '1' if admin else '0' }}"
+              title="{{ 'Admin override is on — click to turn it off' if admin
+                        else 'Enter the admin code to unlock every module' }}">
+        {{ '🔓 admin on' if admin else 'admin' }}
+      </button>
       <button id="theme-toggle" type="button" aria-pressed="false"
               title="Toggle light / dark">🌙 Dark</button>
     </div>

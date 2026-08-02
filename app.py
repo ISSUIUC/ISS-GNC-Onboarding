@@ -9,6 +9,8 @@ add or edit an .ipynb and refresh (restart in non-debug mode).
 
 from __future__ import annotations
 
+import hmac
+import os
 from pathlib import Path
 
 from flask import Flask, abort, jsonify, redirect, render_template, request, url_for
@@ -19,6 +21,13 @@ from engine.renderer import pygments_css, render_blocks
 
 BASE = Path(__file__).parent
 NOTEBOOKS = BASE / "notebooks"
+
+# Shared code that unlocks every module (for instructors demoing a later module,
+# or a student who needs to skip ahead). Override with GNC_ADMIN_CODE if you want
+# something less guessable. This is convenience gating, not security: progress is
+# still tracked per student, and anyone with the code can unlock everything.
+ADMIN_CODE = os.environ.get("GNC_ADMIN_CODE", "gnc-admin")
+ADMIN_COOKIE = "gnc_admin"
 
 app = Flask(__name__)
 
@@ -42,9 +51,14 @@ def _student() -> str:
     return (request.cookies.get("student") or "").strip() or "anonymous"
 
 
+def _is_admin() -> bool:
+    """True if this browser has entered the admin code (cookie set by /admin)."""
+    return hmac.compare_digest(request.cookies.get(ADMIN_COOKIE, ""), ADMIN_CODE)
+
+
 def _gating() -> dict:
     """Per-module {done, total, complete, unlocked, blocked_by} for this student."""
-    return progress.module_counts(_student(), _ordered_modules())
+    return progress.module_counts(_student(), _ordered_modules(), unlock_all=_is_admin())
 
 
 def _locked(module_id: str) -> str | None:
@@ -61,7 +75,26 @@ def _lock_message(blocker: str) -> str:
 
 @app.context_processor
 def inject_globals() -> dict:
-    return {"pygments_css": pygments_css()}
+    return {"pygments_css": pygments_css(), "admin": _is_admin()}
+
+
+@app.post("/admin")
+def admin():
+    """Turn the unlock-everything override on (with the code) or off.
+
+    Body: {"code": "..."} to enable, {"off": true} to disable.
+    """
+    data = request.get_json(force=True, silent=True) or {}
+    if data.get("off"):
+        resp = jsonify(admin=False)
+        resp.delete_cookie(ADMIN_COOKIE, path="/")
+        return resp
+    code = (data.get("code") or "").strip()
+    if not hmac.compare_digest(code, ADMIN_CODE):
+        return jsonify(admin=False, error="Incorrect admin code."), 403
+    resp = jsonify(admin=True)
+    resp.set_cookie(ADMIN_COOKIE, ADMIN_CODE, max_age=60 * 60 * 12, path="/", samesite="Lax")
+    return resp
 
 
 @app.route("/")
