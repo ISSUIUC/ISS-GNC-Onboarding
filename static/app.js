@@ -47,6 +47,35 @@ async function toggleAdmin(isOn) {
   else window.alert(r.error || "Incorrect admin code.");
 }
 
+/* ---- wipe saved progress (server owns data/progress.json) ---- */
+async function resetProgress(isAdmin) {
+  const me = currentStudent() || "guest";
+  let body = null;
+  if (isAdmin) {
+    // Admins get the nuclear option first, then fall back to "just me".
+    if (window.confirm(`Wipe ALL saved progress for EVERY student?\n\nThis empties progress.json and cannot be undone.\n\nOK = everyone · Cancel = choose "just me" next.`)) {
+      body = { all: true };
+    }
+  }
+  if (!body) {
+    if (!window.confirm(`Wipe all saved progress for "${me}"?\n\nThis cannot be undone.`)) return;
+    body = {};
+  }
+  try {
+    const res = await fetch("/reset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const r = await res.json();
+    if (!r.ok) { window.alert("Could not wipe progress."); return; }
+  } catch (e) {
+    window.alert("Could not reach the server.");
+    return;
+  }
+  location.href = "/";
+}
+
 /* ---- light / dark theme (the <head> script applies it before first paint) ---- */
 const editors = [];
 
@@ -73,6 +102,9 @@ document.addEventListener("DOMContentLoaded", () => {
   if (adminBtn) adminBtn.addEventListener("click", () => toggleAdmin(adminBtn.dataset.admin === "1"));
   const adminOff = document.getElementById("admin-off");
   if (adminOff) adminOff.addEventListener("click", () => toggleAdmin(true));
+
+  const resetBtn = document.getElementById("reset-progress");
+  if (resetBtn) resetBtn.addEventListener("click", () => resetProgress(resetBtn.dataset.admin === "1"));
 
   const themeBtn = document.getElementById("theme-toggle");
   if (themeBtn) themeBtn.addEventListener("click", () => applyTheme(currentTheme() === "dark" ? "light" : "dark"));

@@ -47,6 +47,16 @@ class Progress:
             }
             self._write(data)
 
+    def reset(self, student: str | None = None) -> None:
+        """Wipe everything, or just one student's record if `student` is given."""
+        with self._lock:
+            if student is None:
+                self._write({})
+                return
+            data = self._read()
+            data.pop(student, None)
+            self._write(data)
+
     def completed(self, student: str, module_id: str) -> set[str]:
         return set(self._read().get(student, {}).get(module_id, {}).keys())
 

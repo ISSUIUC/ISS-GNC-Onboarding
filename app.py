@@ -97,6 +97,21 @@ def admin():
     return resp
 
 
+@app.post("/reset")
+def reset():
+    """Wipe saved progress.
+
+    Body: {"all": true} to empty progress.json entirely, otherwise just this
+    browser's student is cleared. The UI confirms before calling either way.
+    """
+    data = request.get_json(force=True, silent=True) or {}
+    if data.get("all"):
+        progress.reset()
+        return jsonify(ok=True, scope="all")
+    progress.reset(_student())
+    return jsonify(ok=True, scope=_student())
+
+
 @app.route("/")
 def index():
     modules = _ordered_modules()
