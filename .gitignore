@@ -12,3 +12,6 @@ data/progress.json
 
 # Local scratch
 /Testing.py
+
+# VSCode
+.vscode/

@@ -13,7 +13,8 @@ import hmac
 import os
 from pathlib import Path
 
-from flask import Flask, abort, jsonify, redirect, render_template, request, url_for
+from flask import (Flask, abort, jsonify, redirect, render_template, request,
+                   send_from_directory, url_for)
 
 from engine import discover_modules, grader
 from engine.progress import Progress
@@ -43,8 +44,23 @@ load_modules()
 progress = Progress(BASE / "data" / "progress.json")
 
 
+# Teaching order. discover_modules() sorts by filename, which reads
+# extended_kalman_filter before kalman_filter — backwards. Anything not listed
+# here falls to the end alphabetically, so a new notebook still shows up. This
+# order also drives the sequential unlock in _gating().
+MODULE_ORDER = [
+    "introduction",
+    "linear_algebra",
+    "vectors",
+    "basic_filters",
+    "kalman_filter",
+    "extended_kalman_filter",
+]
+
+
 def _ordered_modules() -> list:
-    return list(_modules.values())
+    rank = {module_id: i for i, module_id in enumerate(MODULE_ORDER)}
+    return sorted(_modules.values(), key=lambda m: (rank.get(m.id, len(rank)), m.id))
 
 
 def _student() -> str:
@@ -129,8 +145,16 @@ def index():
     )
 
 
+# Notebook images are plain relative links (`![](foo.png)`), so the browser
+# requests them alongside the module page, under /m/. Serve those from
+# notebooks/ instead of reading them as a module id.
+NOTEBOOK_ASSETS = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"}
+
+
 @app.route("/m/<module_id>")
 def module_page(module_id: str):
+    if Path(module_id).suffix.lower() in NOTEBOOK_ASSETS:
+        return send_from_directory(NOTEBOOKS, module_id)
     module = _modules.get(module_id)
     if module is None:
         abort(404)
