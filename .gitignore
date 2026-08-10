@@ -9,3 +9,6 @@ __pycache__/
 
 # Local student progress (regenerated at runtime; don't commit real names)
 data/progress.json
+
+# Local scratch
+/Testing.py
