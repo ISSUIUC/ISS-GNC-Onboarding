@@ -50,8 +50,8 @@ progress = Progress(BASE / "data" / "progress.json")
 # order also drives the sequential unlock in _gating().
 MODULE_ORDER = [
     "introduction",
-    "linear_algebra",
     "vectors",
+    "linear_algebra",
     "basic_filters",
     "kalman_filter",
     "extended_kalman_filter",
