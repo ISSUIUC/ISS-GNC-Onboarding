@@ -74,11 +74,17 @@ def _is_admin() -> bool:
 
 def _gating() -> dict:
     """Per-module {done, total, complete, unlocked, blocked_by} for this student."""
-    return progress.module_counts(_student(), _ordered_modules(), unlock_all=_is_admin())
+    res = progress.module_counts(_student(), _ordered_modules(), unlock_all=_is_admin())
+    if "resources" in res:
+        res["resources"]["unlocked"] = True
+        res["resources"]["blocked_by"] = None
+    return res
 
 
 def _locked(module_id: str) -> str | None:
     """Title of the module blocking `module_id`, or None if it's open."""
+    if module_id == "resources":
+        return None
     status = _gating().get(module_id)
     if status is None or status["unlocked"]:
         return None
