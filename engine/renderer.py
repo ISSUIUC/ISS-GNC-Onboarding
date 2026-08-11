@@ -33,6 +33,12 @@ _MATH_PATTERNS = [
     (re.compile(r"\$\$.*?\$\$", re.DOTALL), False),
     (re.compile(r"\\\[.*?\\\]", re.DOTALL), False),
     (re.compile(r"\\\(.*?\\\)", re.DOTALL), False),
+    # A `$...$` span that wraps an environment legitimately spans lines
+    # ("$J = \begin{bmatrix}\n...\n\end{bmatrix}$"). It has to be taken whole,
+    # and *before* the bare-environment rule below, or that rule would wrap the
+    # inner environment in `\(...\)` and leave stray delimiters inside the `$`s.
+    # `[^$]` keeps the match from running past the closing `$` into other prose.
+    (re.compile(r"\$[^$]*?\\begin\{[a-zA-Z*]+\}.*?\\end\{[a-zA-Z*]+\}[^$]*?\$", re.DOTALL), False),
     (re.compile(r"\$[^$\n]+?\$"), False),
     (re.compile(r"\\begin\{[a-zA-Z*]+\}.*?\\end\{[a-zA-Z*]+\}", re.DOTALL), True),
 ]
@@ -136,6 +142,9 @@ def render_blocks(module: Module) -> list[dict]:
                     "kind": "code",
                     "html": highlight(block.source),
                     "output": block.outputs,
+                    "images": block.images,
+                    "source": block.source,
+                    "cell": block.cell_index,
                 }
             )
         elif block.kind == "exercise":

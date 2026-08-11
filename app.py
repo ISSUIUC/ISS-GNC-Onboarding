@@ -181,9 +181,33 @@ def _lookup():
 def run():
     module, exercise, data = _lookup()
     if (blocker := _locked(module.id)) is not None:
-        return jsonify(ok=False, stdout="", error=_lock_message(blocker)), 403
+        return jsonify(ok=False, stdout="", error=_lock_message(blocker), figures=[]), 403
     result = grader.run_only(module, exercise, data.get("code", ""))
-    return jsonify(ok=result.ok, stdout=result.stdout, error=result.error)
+    return jsonify(
+        ok=result.ok, stdout=result.stdout, error=result.error, figures=result.figures
+    )
+
+
+@app.post("/run-cell")
+def run_cell():
+    """Run a worked-example cell. Nothing here is graded or saved — it exists so
+    an example behaves like the notebook cell it came from."""
+    data = request.get_json(force=True, silent=True) or {}
+    module = _modules.get(data.get("module"))
+    if module is None:
+        abort(404)
+    if (blocker := _locked(module.id)) is not None:
+        return jsonify(ok=False, stdout="", error=_lock_message(blocker), figures=[]), 403
+    try:
+        cell_index = int(data.get("cell", -1))
+    except (TypeError, ValueError):
+        abort(400)
+    if not any(b.kind == "code" and b.cell_index == cell_index for b in module.blocks):
+        abort(404)
+    result = grader.run_cell(module, cell_index, data.get("code", ""))
+    return jsonify(
+        ok=result.ok, stdout=result.stdout, error=result.error, figures=result.figures
+    )
 
 
 @app.post("/grade")
@@ -197,6 +221,7 @@ def grade():
             stdout="",
             error=_lock_message(blocker),
             checks=[],
+            figures=[],
         ), 403
     result = grader.grade(module, exercise, data.get("code", ""))
     if result.passed:
@@ -207,6 +232,7 @@ def grade():
         score=result.score,
         stdout=result.stdout,
         error=result.error,
+        figures=result.figures,
         checks=[
             {
                 "label": c.label,

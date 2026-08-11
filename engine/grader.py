@@ -39,6 +39,7 @@ class RunResult:
     vars: dict = field(default_factory=dict)  # name -> encoded value
     missing: list[str] = field(default_factory=list)
     checks: list[dict] = field(default_factory=list)  # from a behaviour checker
+    figures: list[str] = field(default_factory=list)  # matplotlib PNGs, as data: URIs
 
 
 @dataclass
@@ -48,6 +49,7 @@ class GradeResult:
     checks: list[CheckResult]
     stdout: str = ""
     error: str | None = None
+    figures: list[str] = field(default_factory=list)
 
 
 def execute(setup: list[str], code: str, extract: list[str], checker: str = "") -> RunResult:
@@ -85,6 +87,7 @@ def execute(setup: list[str], code: str, extract: list[str], checker: str = "") 
         vars=data["vars"],
         missing=data["missing"],
         checks=data.get("checks", []),
+        figures=data.get("figures", []),
     )
 
 
@@ -110,8 +113,17 @@ def _reference(module: Module, exercise: Exercise) -> RunResult:
 
 def run_only(module: Module, exercise: Exercise, student_code: str) -> RunResult:
     """Just execute the student's code and return output (the "Run" button)."""
-    setup = module.setup_code(exercise.cell_index)
-    return execute(setup, student_code, [])
+    return run_cell(module, exercise.cell_index, student_code)
+
+
+def run_cell(module: Module, cell_index: int, code: str) -> RunResult:
+    """Run one cell with the notebook state that precedes it.
+
+    Backs "Run" on both exercises and worked-example cells — an example is
+    re-runnable and editable, so a student can poke at it the way they would in
+    Jupyter, and nothing about it is graded or saved.
+    """
+    return execute(module.setup_code(cell_index), code, [])
 
 
 def grade(module: Module, exercise: Exercise, student_code: str) -> GradeResult:
@@ -124,6 +136,7 @@ def grade(module: Module, exercise: Exercise, student_code: str) -> GradeResult:
             checks=[],
             stdout=run.stdout,
             error=run.error,
+            figures=run.figures,
         )
 
     reference = _reference(module, exercise)
@@ -180,4 +193,5 @@ def grade(module: Module, exercise: Exercise, student_code: str) -> GradeResult:
         checks=checks,
         stdout=student.stdout,
         error=student.error,
+        figures=student.figures,
     )

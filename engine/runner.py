@@ -18,7 +18,8 @@ Result:
       "error": "traceback|null",
       "vars": {name: <encoded>}, # captured values for names that existed
       "missing": ["name", ...],  # requested names that were never defined
-      "checks": [{"label", "ok", "message", "expected", "got"}, ...]
+      "checks": [{"label", "ok", "message", "expected", "got"}, ...],
+      "figures": ["data:image/png;base64,...", ...]   # matplotlib output
     }
 
 A *behaviour checker* is lead-authored code defining `check(ctx)`. It runs here,
@@ -35,6 +36,7 @@ for trusted teammates, not a hostile-code sandbox — see README security notes.
 from __future__ import annotations
 
 import ast
+import base64
 import io
 import json
 import sys
@@ -56,6 +58,42 @@ def _apply_limits() -> None:
             resource.setrlimit(res, (limit, new_hard))
         except (ValueError, OSError):
             pass  # some platforms (macOS RLIMIT_AS) refuse; not fatal
+
+
+MAX_FIGURES = 8
+
+
+def _close_figures() -> None:
+    plt = sys.modules.get("matplotlib.pyplot")
+    if plt is not None:
+        try:
+            plt.close("all")
+        except Exception:
+            pass
+
+
+def _capture_figures() -> list[str]:
+    """Any matplotlib figures the code left open, as PNG data: URIs.
+
+    The subprocess runs under the Agg backend, so `plt.show()` is a no-op and
+    the figures just stay open — rendering them here is the only way a plot
+    ever reaches the page.
+    """
+    plt = sys.modules.get("matplotlib.pyplot")
+    if plt is None:
+        return []
+    images: list[str] = []
+    try:
+        for num in plt.get_fignums()[:MAX_FIGURES]:
+            buf = io.BytesIO()
+            plt.figure(num).savefig(buf, format="png", dpi=110, bbox_inches="tight")
+            images.append(
+                "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("ascii")
+            )
+    except Exception:
+        pass  # a broken figure must not sink an otherwise good run
+    _close_figures()
+    return images
 
 
 def _encode(v):
@@ -252,6 +290,8 @@ def main() -> None:
                 exec(compile(cell, "<setup>", "exec"), namespace)
             except Exception:
                 pass
+    # Earlier cells plot too; drop theirs so only this cell's figures show.
+    _close_figures()
 
     # 2. Run the code under test, capturing its output and any error.
     out = io.StringIO()
@@ -265,6 +305,7 @@ def main() -> None:
     except Exception:
         ok = False
         error = _format_error()
+    figures = _capture_figures()
 
     # 3. Extract requested variables.
     variables = {}
@@ -293,6 +334,7 @@ def main() -> None:
         "vars": variables,
         "missing": missing,
         "checks": checks,
+        "figures": figures,
     }
     sys.stdout.write(json.dumps(result))
 

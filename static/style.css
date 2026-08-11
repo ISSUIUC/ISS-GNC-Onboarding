@@ -34,55 +34,58 @@
 }
 
 /* ---------------------------------------------------------------------------
-   Palette. Base five: Saffron #e3b505, Oxblood #95190c, Crimson Violet #610345,
-   Teal #107e7d, Yale Blue #044b7f — extended with warm parchment neutrals (light)
-   and lightened siblings that stay legible on a dark ground.
-   Light is the default; `<html data-theme="dark">` flips every token below.
+   Palette — pulled from the ISS patch (static/logo.webp): black ground, gold
+   ring (#e3c900), white lettering, rust-red wordmark. Light is white ground /
+   black ink / red accent; `<html data-theme="dark">` flips it to black ground /
+   white ink, with red and gold lightened to stay legible. Raw gold is far too
+   pale for text on white, so `--gold` is fills and rules only and `--gold-ink`
+   is its readable sibling. Green appears solely as a pass/fail signal.
    --------------------------------------------------------------------------- */
 :root {
-  /* raw palette — available for one-off accents */
-  --saffron: #e3b505;
-  --oxblood: #95190c;
-  --crimson: #610345;
-  --teal: #107e7d;
-  --yale: #044b7f;
+  /* raw brand colours — available for one-off accents */
+  --red: #c0271b;
+  --red-deep: #8a1e0b;
+  --gold: #e3c900;      /* straight off the patch — fills and rules only */
+  --gold-ink: #8a6b00;  /* the readable version, for gold-coloured text */
+  --black: #0c0c0e;
+  --white: #ffffff;
 
-  --bg: #f4eee1;
-  --bg-glow: #fbf3dc;
-  --panel: #fffdf7;
-  --panel-2: #f8f2e5;
-  --ink: #1c1520;
-  --muted: #6f6476;
-  --line: #ddd1ba;
-  --accent: #044b7f;
-  --accent-hover: #02334f;
-  --accent-on: #fffdf7;
-  --accent-2: #107e7d;
-  --accent-3: #610345;
-  --ok: #0f6f5c;
-  --bad: #95190c;
-  --warn: #8a6d04;
+  --bg: #ffffff;
+  --bg-glow: #fdf3ee;
+  --panel: var(--white);
+  --panel-2: #f6f6f7;
+  --ink: var(--black);
+  --muted: #6b6b73;
+  --line: #e3e3e6;
+  --accent: var(--red);
+  --accent-hover: var(--red-deep);
+  --accent-on: var(--white);
+  --accent-2: #17171b;
+  --accent-3: var(--red);
+  --ok: #1c7a4f;
+  --bad: var(--red);
+  --warn: var(--gold-ink);
 
-  --code-bg: #f1e9d8;
-  --example-bg: #fbf6ea;
-  --cell-out-bg: #f0e8d6;
-  --cell-out-ink: #4d4351;
-  --ex-bg-1: #fffdf7;
-  --ex-bg-2: #f7f0e1;
-  --btn-bg: #f2ead9;
-  --ex-out-bg: #fbf6ea;
-  --ex-out-ink: #2e2634;
-  --ex-out-error-ink: #7d1509;
-  --row-bg: #faf5e9;
-  --topbar-bg: rgba(255, 253, 247, .82);
+  --code-bg: #f5f5f6;
+  --example-bg: #fafafb;
+  --cell-out-bg: #f2f2f4;
+  --cell-out-ink: #3b3b42;
+  --ex-bg-1: var(--white);
+  --ex-bg-2: #f7f7f8;
+  --btn-bg: #f3f3f5;
+  --ex-out-bg: #fafafb;
+  --ex-out-ink: #1c1c21;
+  --ex-out-error-ink: var(--red-deep);
+  --row-bg: #fafafb;
+  --topbar-bg: rgba(255, 255, 255, .85);
 
-  --ok-tint: rgba(16, 126, 125, .13);
-  --bad-tint: rgba(149, 25, 12, .1);
-  --accent-tint: rgba(4, 75, 127, .12);
-  --accent2-tint: rgba(16, 126, 125, .13);
-  --accent3-tint: rgba(97, 3, 69, .11);
-  --muted-tint: rgba(111, 100, 118, .12);
-  --saffron-tint: rgba(227, 181, 5, .2);
+  --ok-tint: rgba(28, 122, 79, .12);
+  --bad-tint: rgba(192, 39, 27, .1);
+  --accent-tint: rgba(192, 39, 27, .1);
+  --accent2-tint: rgba(23, 23, 27, .08);
+  --accent3-tint: rgba(192, 39, 27, .1);
+  --muted-tint: rgba(107, 107, 115, .12);
+  --warn-tint: rgba(227, 201, 0, .22);
 
   --radius: 12px;
   --ui: "Work Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -92,48 +95,49 @@
 }
 
 :root[data-theme="dark"] {
-  --saffron: #f2c94c;
-  --oxblood: #e2553c;
-  --crimson: #c45a97;
-  --teal: #2ec4b6;
-  --yale: #4a9edb;
+  --red: #ff5f52;
+  --red-deep: #e03e2f;
+  --gold: #e3c900;
+  --gold-ink: #f0cf3a;
+  --black: #08080a;
+  --white: #ffffff;
 
-  --bg: #0a1017;
-  --bg-glow: #0f2739;
-  --panel: #101b27;
-  --panel-2: #0c141d;
-  --ink: #ece4d6;
-  --muted: #93a0ac;
-  --line: #1f3548;
-  --accent: #4a9edb;
-  --accent-hover: #74b6e7;
-  --accent-on: #04121d;
-  --accent-2: #2ec4b6;
-  --accent-3: #c45a97;
-  --ok: #2ec4b6;
-  --bad: #e2553c;
-  --warn: #f2c94c;
+  --bg: var(--black);
+  --bg-glow: #1c0f08;
+  --panel: #131316;
+  --panel-2: #0e0e11;
+  --ink: #f2f2f4;
+  --muted: #9a9aa4;
+  --line: #2a2a30;
+  --accent: var(--red);
+  --accent-hover: #ff8578;
+  --accent-on: #0c0c0e;
+  --accent-2: #f2f2f4;
+  --accent-3: var(--red);
+  --ok: #35c47f;
+  --bad: var(--red);
+  --warn: var(--gold-ink);
 
-  --code-bg: #0c1a26;
-  --example-bg: #0c1622;
-  --cell-out-bg: #08111a;
-  --cell-out-ink: #b6c3ce;
-  --ex-bg-1: #101d2b;
-  --ex-bg-2: #0c1620;
-  --btn-bg: #14283a;
-  --ex-out-bg: #060d14;
-  --ex-out-ink: #d5dde4;
-  --ex-out-error-ink: #ffc9bd;
-  --row-bg: #0a141e;
-  --topbar-bg: rgba(10, 16, 23, .78);
+  --code-bg: #101014;
+  --example-bg: #0f0f13;
+  --cell-out-bg: #0b0b0e;
+  --cell-out-ink: #c3c3cc;
+  --ex-bg-1: #141418;
+  --ex-bg-2: #0f0f13;
+  --btn-bg: #1c1c22;
+  --ex-out-bg: var(--black);
+  --ex-out-ink: #dcdce2;
+  --ex-out-error-ink: #ffb9ae;
+  --row-bg: #0e0e12;
+  --topbar-bg: rgba(8, 8, 10, .82);
 
-  --ok-tint: rgba(46, 196, 182, .15);
-  --bad-tint: rgba(226, 85, 60, .13);
-  --accent-tint: rgba(74, 158, 219, .16);
-  --accent2-tint: rgba(46, 196, 182, .14);
-  --accent3-tint: rgba(196, 90, 151, .15);
-  --muted-tint: rgba(147, 160, 172, .14);
-  --saffron-tint: rgba(242, 201, 76, .16);
+  --ok-tint: rgba(53, 196, 127, .14);
+  --bad-tint: rgba(255, 95, 82, .14);
+  --accent-tint: rgba(255, 95, 82, .14);
+  --accent2-tint: rgba(242, 242, 244, .1);
+  --accent3-tint: rgba(255, 95, 82, .14);
+  --muted-tint: rgba(154, 154, 164, .14);
+  --warn-tint: rgba(240, 207, 58, .16);
 }
 
 * { box-sizing: border-box; }
@@ -159,27 +163,24 @@ a:hover { text-decoration: underline; }
   backdrop-filter: blur(8px);
   position: sticky; top: 0; z-index: 20;
 }
-/* the full five-colour palette as a hairline under the header */
+/* red / gold / ink hairline under the header — the fourth colour is the page */
 .topbar::after {
   content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
   background: linear-gradient(90deg,
-    var(--saffron) 0%, var(--saffron) 20%,
-    var(--oxblood) 20%, var(--oxblood) 40%,
-    var(--crimson) 40%, var(--crimson) 60%,
-    var(--teal) 60%, var(--teal) 80%,
-    var(--yale) 80%);
+    var(--red) 0 34%, var(--gold) 34% 50%, var(--ink) 50% 66%, var(--red) 66%);
 }
 .brand {
+  display: inline-flex; align-items: center; gap: 10px;
   color: var(--ink); font-family: var(--display); font-weight: 700;
   font-size: 19px; letter-spacing: .4px;
 }
 .brand:hover { text-decoration: none; color: var(--accent); }
-.logo { font-size: 14px; color: var(--accent-2); }
+.logo { height: 30px; width: auto; display: block; }
 .who { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); }
 #student-label { color: var(--ink); font-weight: 600; }
 .link-btn { background: none; border: none; color: var(--accent); cursor: pointer; font: inherit; font-size: 13px; }
 .link-btn.danger { color: var(--muted); }
-.link-btn.danger:hover { color: #c2410c; }
+.link-btn.danger:hover { color: var(--bad); }
 
 #theme-toggle {
   border: 1px solid var(--line); background: var(--btn-bg); color: var(--ink);
@@ -224,12 +225,12 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 22px 90px; }
 .module-card .body { flex: 1; }
 .badge { font: 400 9px/1.4 var(--pixel); padding: 6px 9px; border-radius: 6px; white-space: nowrap; }
 .badge.done { background: var(--ok-tint); color: var(--ok); }
-.badge.partial { background: var(--saffron-tint); color: var(--warn); }
+.badge.partial { background: var(--warn-tint); color: var(--warn); }
 .badge.locked { background: var(--panel); color: var(--muted); border: 1px solid var(--line); }
 .empty { color: var(--muted); }
 .notice {
   margin: 22px 0 0; padding: 12px 14px; font-size: 14px;
-  background: var(--saffron-tint); color: var(--warn);
+  background: var(--warn-tint); color: var(--warn);
   border: 1px solid var(--line); border-radius: var(--radius);
 }
 .notice.admin-notice { background: var(--accent-tint); color: var(--accent); }
@@ -250,15 +251,43 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 22px 90px; }
 .prose code { font-family: var(--mono); background: var(--code-bg); padding: 1px 6px; border-radius: 5px; font-size: .92em; }
 .prose pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow-x: auto; }
 .prose pre code { background: none; padding: 0; }
-.prose blockquote { border-left: 3px solid var(--saffron); margin: 12px 0; padding: 2px 14px; color: var(--muted); }
+.prose blockquote { border-left: 3px solid var(--gold); margin: 12px 0; padding: 2px 14px; color: var(--muted); }
+
+/* Notebook figures. The saved PNGs are 1300-1500px wide, so without a cap they
+   run straight past the 900px column. The white ground is deliberate in both
+   themes: a matplotlib plot is drawn for white paper, and its black axes and
+   tick labels would be unreadable floating on the dark theme's background. */
+.prose img {
+  display: block; max-width: 100%; height: auto;
+  margin: 16px auto; padding: 10px;
+  background: var(--white); border: 1px solid var(--line); border-radius: 8px;
+}
+.cell-figure {
+  display: block; width: 100%; height: auto;
+  padding: 12px; background: var(--white); border-top: 1px dashed var(--line);
+}
 
 /* worked examples */
 .example { margin: 16px 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .example .highlight { margin: 0; background: none; }
 .example pre { margin: 0; padding: 14px 16px; background: var(--example-bg); overflow-x: auto; font-family: var(--mono); font-size: 14px; }
+.example .CodeMirror { border: 0; border-radius: 0; background: var(--example-bg); }
+.example .CodeMirror-gutters { background: var(--example-bg); border-right: 1px solid var(--line); }
+.example-actions {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px; background: var(--panel-2); border-top: 1px solid var(--line);
+}
+.example-actions .btn { padding: 6px 12px; font-size: 13px; }
+.example-hint { font-size: 12px; color: var(--muted); }
 .cell-output {
   margin: 0; padding: 10px 16px; background: var(--cell-out-bg); border-top: 1px dashed var(--line);
   color: var(--cell-out-ink); font-family: var(--mono); font-size: 13px; white-space: pre-wrap; overflow-x: auto;
+}
+.cell-output.error { color: var(--ex-out-error-ink); }
+
+.ex-figures:empty { display: none; }
+.ex-figures .cell-figure {
+  margin: 14px 0 0; border: 1px solid var(--line); border-radius: 8px;
 }
 
 /* exercises */
@@ -318,7 +347,7 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 22px 90px; }
 .check-row .detail { color: var(--muted); font-size: 13px; margin-top: 2px; }
 .check-row .kv { font-family: var(--mono); font-size: 12.5px; }
 .check-row .kv .exp { color: var(--ok); }
-.check-row .kv .got { color: var(--warn); }
+.check-row .kv .got { color: var(--bad); }
 .banner { padding: 10px 14px; border-radius: 8px; font-weight: 600; }
 .banner.pass { background: var(--ok-tint); color: var(--ok); }
 .banner.fail { background: var(--bad-tint); color: var(--bad); }

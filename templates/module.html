@@ -11,11 +11,23 @@
       <div class="prose">{{ block.html | safe }}</div>
 
     {% elif block.kind == 'code' %}
-      <div class="example">
+      {# Editable + runnable, like the notebook cell it came from. The Pygments
+         copy is what shows before CodeMirror takes over (and if JS is off). #}
+      <div class="example" data-cell="{{ block.cell }}">
         <div class="highlight"><pre>{{ block.html | safe }}</pre></div>
-        {% if block.output %}
-          <pre class="cell-output">{{ block.output }}</pre>
-        {% endif %}
+        <textarea class="example-editor" hidden>{{ block.source }}</textarea>
+        <div class="example-actions" hidden>
+          <button class="btn run" type="button">▶ Run</button>
+          <span class="example-hint">Shift + Enter</span>
+        </div>
+        <div class="cell-result">
+          {% if block.output %}
+            <pre class="cell-output">{{ block.output }}</pre>
+          {% endif %}
+          {% for src in block.images %}
+            <img class="cell-figure" src="{{ src }}" alt="Figure from this cell">
+          {% endfor %}
+        </div>
       </div>
 
     {% elif block.kind == 'exercise' %}
@@ -43,6 +55,7 @@
         </div>
 
         <pre class="ex-output" hidden></pre>
+        <div class="ex-figures"></div>
         <div class="feedback" hidden></div>
       </section>
     {% endif %}

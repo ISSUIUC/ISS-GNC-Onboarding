@@ -110,8 +110,21 @@ document.addEventListener("DOMContentLoaded", () => {
   if (themeBtn) themeBtn.addEventListener("click", () => applyTheme(currentTheme() === "dark" ? "light" : "dark"));
 
   initExercises();
+  initExamples();
   applyTheme(currentTheme());
 });
+
+/* ---- figures returned by a run (matplotlib PNGs, as data: URIs) ---- */
+function showFigures(container, figures) {
+  container.innerHTML = "";
+  (figures || []).forEach((src) => {
+    const img = document.createElement("img");
+    img.className = "cell-figure";
+    img.src = src;
+    img.alt = "Figure from this cell";
+    container.appendChild(img);
+  });
+}
 
 /* ---- exercise editors ---- */
 function initExercises() {
@@ -133,6 +146,7 @@ function initExercises() {
     const exId = ex.dataset.exercise;
     const graded = ex.dataset.graded === "1";
     const outEl = ex.querySelector(".ex-output");
+    const figEl = ex.querySelector(".ex-figures");
     const fbEl = ex.querySelector(".feedback");
     const statusEl = ex.querySelector(".ex-status");
     const runBtn = ex.querySelector(".btn.run");
@@ -151,15 +165,21 @@ function initExercises() {
       outEl.classList.toggle("error", !!isError);
     }
 
-    runBtn.addEventListener("click", async () => {
+    async function runExercise() {
       runBtn.disabled = true; fbEl.hidden = true;
       try {
         const r = await post("/run");
-        showOutput(r.error ? r.error : (r.stdout || "(no output)"), !!r.error);
+        showFigures(figEl, r.figures);
+        // A plot is output too, so a cell that only plots isn't "no output".
+        const quiet = (r.figures || []).length ? "" : "(no output)";
+        showOutput(r.error ? r.error : (r.stdout || quiet), !!r.error);
       } catch (e) {
+        showFigures(figEl, []);
         showOutput("Could not reach the server.", true);
       } finally { runBtn.disabled = false; }
-    });
+    }
+    runBtn.addEventListener("click", runExercise);
+    cm.setOption("extraKeys", { "Shift-Enter": runExercise });
 
     checkBtn.addEventListener("click", async () => {
       if (!currentStudent()) { ensureStudent(true); if (!currentStudent()) return; }
@@ -174,6 +194,7 @@ function initExercises() {
 
     function renderFeedback(r) {
       showOutput(r.error ? r.error : (r.stdout || ""), !!r.error);
+      showFigures(figEl, r.figures);
       fbEl.innerHTML = "";
       fbEl.hidden = false;
 
@@ -235,4 +256,71 @@ function escapeHtml(s) {
 }
 function renderInlineCode(s) {
   return escapeHtml(s).replace(/`([^`]+)`/g, "<code>$1</code>");
+}
+
+/* ---- worked examples: editable and runnable, but never graded ----
+   The server replays the cells above each one, so an example behaves like the
+   notebook cell it came from. Edits are local to the page — a reload restores
+   the notebook's own code and its saved output. */
+function initExamples() {
+  const moduleEl = document.querySelector(".module");
+  if (!moduleEl) return;
+  const moduleId = moduleEl.dataset.module;
+
+  document.querySelectorAll(".example[data-cell]").forEach((ex) => {
+    const textarea = ex.querySelector(".example-editor");
+    const actions = ex.querySelector(".example-actions");
+    const highlight = ex.querySelector(".highlight");
+    if (!textarea || !actions) return;
+
+    // Swap the read-only Pygments copy for a live editor.
+    highlight.remove();
+    textarea.hidden = false;
+    actions.hidden = false;
+
+    const cm = CodeMirror.fromTextArea(textarea, {
+      mode: "python",
+      theme: currentTheme() === "dark" ? "material-darker" : "default",
+      lineNumbers: true,
+      indentUnit: 4,
+      viewportMargin: Infinity,
+    });
+    editors.push(cm);
+
+    const cell = ex.dataset.cell;
+    const runBtn = ex.querySelector(".btn.run");
+    const result = ex.querySelector(".cell-result");
+
+    async function runCell() {
+      runBtn.disabled = true;
+      cm.save();
+      try {
+        const res = await fetch("/run-cell", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ module: moduleId, cell: Number(cell), code: cm.getValue() }),
+        });
+        const r = await res.json();
+        renderResult(r.error ? r.error : r.stdout, !!r.error, r.figures);
+      } catch (e) {
+        renderResult("Could not reach the server.", true, []);
+      } finally { runBtn.disabled = false; }
+    }
+
+    function renderResult(text, isError, figures) {
+      result.innerHTML = "";
+      const quiet = (figures || []).length ? "" : "(no output)";
+      const body = text || quiet;
+      if (body) {
+        const pre = document.createElement("pre");
+        pre.className = "cell-output" + (isError ? " error" : "");
+        pre.textContent = body;
+        result.appendChild(pre);
+      }
+      showFigures(result.appendChild(document.createElement("div")), figures);
+    }
+
+    runBtn.addEventListener("click", runCell);
+    cm.setOption("extraKeys", { "Shift-Enter": runCell });
+  });
 }

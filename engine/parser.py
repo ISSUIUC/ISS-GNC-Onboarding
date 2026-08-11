@@ -53,6 +53,7 @@ Directives (lines beginning with `#%`, stripped from what the student sees):
 from __future__ import annotations
 
 import ast
+import base64
 import json
 import re
 from dataclasses import dataclass, field
@@ -105,6 +106,7 @@ class Block:
     # markdown -> raw markdown source; code -> source; exercise -> None
     source: str = ""
     outputs: str = ""  # saved text output for a worked-example code cell
+    images: list[str] = field(default_factory=list)  # saved figures, as data: URIs
     exercise: Exercise | None = None
     cell_index: int = 0  # position in the notebook, for setup ordering
 
@@ -429,18 +431,43 @@ def _checker_candidates(module_id: str, exercise_id: str, number: int) -> list[s
     return list(dict.fromkeys(names))
 
 
-def _cell_output_text(cell: dict) -> str:
+# Image mime types a saved cell output can carry, best first. SVG arrives as
+# text; the bitmap formats arrive base64-encoded already.
+_IMAGE_MIMES = ("image/png", "image/jpeg", "image/gif", "image/svg+xml")
+
+# `plt.show()` in a notebook leaves a useless repr next to the real picture
+# ("<Figure size 1000x400 with 1 Axes>"). Jupyter hides it; so do we.
+_FIGURE_REPR = re.compile(r"^\s*<(?:Figure|matplotlib\.[^>]*)[^>]*>\s*$")
+
+
+def _cell_outputs(cell: dict) -> tuple[str, list[str]]:
+    """Split a cell's saved outputs into (text, image data URIs)."""
     chunks: list[str] = []
+    images: list[str] = []
     for out in cell.get("outputs", []):
         if out.get("output_type") == "stream":
             chunks.append("".join(out.get("text", [])))
         elif out.get("output_type") in ("execute_result", "display_data"):
             data = out.get("data", {})
-            if "text/plain" in data:
-                chunks.append("".join(data["text/plain"]))
+            mime = next((m for m in _IMAGE_MIMES if m in data), None)
+            if mime is not None:
+                payload = data[mime]
+                if isinstance(payload, list):
+                    payload = "".join(payload)
+                if mime == "image/svg+xml":
+                    images.append(
+                        "data:image/svg+xml;base64,"
+                        + base64.b64encode(payload.encode("utf-8")).decode("ascii")
+                    )
+                else:
+                    images.append(f"data:{mime};base64,{payload.strip()}")
+            text = "".join(data.get("text/plain", []))
+            # Keep the repr only when it is the output, not a caption on a figure.
+            if text and not (mime is not None and _FIGURE_REPR.match(text)):
+                chunks.append(text)
         elif out.get("output_type") == "error":
             chunks.append("\n".join(out.get("traceback", [])))
-    return "".join(chunks).rstrip()
+    return "".join(chunks).rstrip(), images
 
 
 def parse_notebook(path: str | Path) -> Module:
@@ -520,10 +547,12 @@ def parse_notebook(path: str | Path) -> Module:
             block.cell_index = cell_index
             blocks.append(block)
         else:
+            text, images = _cell_outputs(cell)
             block = Block(
                 kind="code",
                 source=source.rstrip(),
-                outputs=_cell_output_text(cell),
+                outputs=text,
+                images=images,
             )
             block.cell_index = cell_index
             blocks.append(block)
