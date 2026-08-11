@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}ISS GNC Onboarding{% endblock %}</title>
+
+  <!-- Apply the saved theme before first paint so there is no light/dark flash. -->
+  <script>
+    (function () {
+      var saved = localStorage.getItem("gnc_theme");
+      document.documentElement.dataset.theme = saved === "dark" ? "dark" : "light";
+    })();
+  </script>
+
+  <!-- self-hosted Google Fonts (see static/fonts/) -->
+  <link rel="preload" as="font" type="font/ttf" crossorigin
+        href="{{ url_for('static', filename='fonts/WorkSans-Variable.ttf') }}">
+  <link rel="preload" as="font" type="font/ttf" crossorigin
+        href="{{ url_for('static', filename='fonts/Oswald-Variable.ttf') }}">
+
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>{{ pygments_css | safe }}</style>
+
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+        processEnvironments: true
+      },
+      options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+    };
+  </script>
+  <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('index') }}">
+      <img class="logo" src="{{ url_for('static', filename='logo.webp') }}"
+           alt="Illinois Space Society">
+      <span>ISS&nbsp;·&nbsp;GNC Onboarding</span>
+    </a>
+    <div class="who">
+      <span id="student-label"></span>
+      <button id="change-student" class="link-btn" type="button">change</button>
+      <button id="admin-toggle" class="link-btn" type="button"
+              data-admin="{{ '1' if admin else '0' }}"
+              title="{{ 'Admin override is on — click to turn it off' if admin
+                        else 'Enter the admin code to unlock every module' }}">
+        {{ '🔓 admin on' if admin else 'admin' }}
+      </button>
+      <button id="reset-progress" class="link-btn danger" type="button"
+              data-admin="{{ '1' if admin else '0' }}"
+              title="{{ 'Wipe progress — admin can clear progress.json for everyone'
+                        if admin else 'Wipe your saved progress' }}">
+        reset
+      </button>
+      <button id="theme-toggle" type="button" aria-pressed="false"
+              title="Toggle light / dark">🌙 Dark</button>
+    </div>
+  </header>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

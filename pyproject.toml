@@ -1,0 +1,13 @@
+[project]
+name = "iss-gnc-onboarding"
+version = "0.1.0"
+description = "A self-contained mini-PrairieLearn: turns GNC onboarding notebooks into interactive, auto-graded web modules."
+requires-python = ">=3.13"
+dependencies = [
+    "flask>=3.1.3",
+    "markdown>=3.10.3",
+    # the teaching notebooks plot; the runner renders figures off the Agg backend
+    "matplotlib>=3.9",
+    "numpy>=2.5.1",
+    "pygments>=2.20.0",
+]

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Modules · ISS GNC Onboarding{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <h1>Guidance, Navigation &amp; Control — Onboarding</h1>
+  <p>Work through each module in order. Read the explanations, run the examples,
+     and solve the exercises. Graded exercises check your answer automatically and
+     track your progress — the next module unlocks once you've passed every graded
+     exercise in this one.</p>
+</section>
+
+{% if admin %}
+<p class="notice admin-notice">
+  🔓 Admin override active — every module is unlocked. Progress is still tracked
+  normally. <button id="admin-off" class="link-btn" type="button">turn off</button>
+</p>
+{% endif %}
+
+{% if locked_notice %}
+<p class="notice locked-notice">
+  🔒 “{{ locked_notice.module }}” is locked — finish “{{ locked_notice.blocker }}” to unlock it.
+</p>
+{% endif %}
+
+<ul class="module-list">
+  {% for module in modules %}
+  {% set c = counts[module.id] %}
+  <li class="module-card {{ '' if c.unlocked else 'locked' }}">
+    {# A locked module renders as a plain span: no href, nothing to click. #}
+    <{{ 'a' if c.unlocked else 'span' }}
+       {% if c.unlocked %}href="{{ url_for('module_page', module_id=module.id) }}"{% endif %}
+       class="card-face"{% if not c.unlocked %} aria-disabled="true"{% endif %}>
+      <span class="index">{{ '%02d' % loop.index }}</span>
+      <span class="body">
+        <span class="name">{{ module.title }}</span>
+        <span class="meta">
+          {% if c.unlocked %}
+            {{ module.exercises | length }} exercise{{ '' if module.exercises|length == 1 else 's' }}
+            {% if c.total %}· {{ c.done }}/{{ c.total }} graded complete{% endif %}
+          {% else %}
+            Locked · finish “{{ c.blocked_by }}” to unlock
+          {% endif %}
+        </span>
+      </span>
+      {% if not c.unlocked %}
+        <span class="badge locked">🔒 locked</span>
+      {% elif c.total and c.complete %}
+        <span class="badge done">✓ done</span>
+      {% elif c.done %}
+        <span class="badge partial">{{ c.done }}/{{ c.total }}</span>
+      {% endif %}
+    </{{ 'a' if c.unlocked else 'span' }}>
+  </li>
+  {% endfor %}
+</ul>
+
+{% if not modules %}
+<p class="empty">No notebooks found in <code>notebooks/</code>.</p>
+{% endif %}
+{% endblock %}

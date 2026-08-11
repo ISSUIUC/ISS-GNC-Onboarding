@@ -1,1 +1,17 @@
+# Python / uv
+.venv/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store
+
+# Local student progress (regenerated at runtime; don't commit real names)
+data/progress.json
+
+# Local scratch
 /Testing.py
+
+# VSCode
+.vscode/
