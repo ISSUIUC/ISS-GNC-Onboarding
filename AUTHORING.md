@@ -246,7 +246,13 @@ The comparison adapts to the reference value's type:
 - An exercise with no solution and no checker is still useful — it's a runnable
   practice cell, marked complete once it runs without an error. Add a
   `check_exN` to the notebook's checker module whenever you're ready for it to
-  be graded properly; the cell itself doesn't change.
+  be graded properly; the cell itself doesn't change. (As of now every exercise
+  in every notebook is graded, so there are none left in this state.)
+- **Regression test after any edit**: `uv run python notebooks/checkers/sweep.py`
+  grades every exercise's own reference solution and exits non-zero on a
+  regression. If the reference can't pass, no student can. Add `kalman` (or any
+  substring) to sweep one notebook. `notebooks/checkers/README.md` is the index
+  of which checker grades what, and the constraints they're written under.
 - Checker modules are plain Python — `uv run python -m pytest` over them, or
   just import one and call `check(ctx)` with a fake ctx, if a checker gets
   hairy enough to be worth a test.
