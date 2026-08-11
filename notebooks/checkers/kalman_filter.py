@@ -1072,8 +1072,8 @@ def check_ex2(ctx):
     # of this filter satisfies that to floating-point noise, whatever Q, R or P
     # the student chose — and a state list copied off true_position, however
     # carefully, does not.
-    step = _number(ctx.env.get("dt")) or SHIPPED_DT
-    predicted = position[:-1] + step * velocity[:-1]
+    timestep = _number(ctx.env.get("dt")) or SHIPPED_DT
+    predicted = position[:-1] + timestep * velocity[:-1]
     slip = _rms(residuals[1:], data[1:] - predicted)
     ctx.require(
         "Each residual is the measurement minus the filter's own prediction",
@@ -1095,8 +1095,8 @@ def check_ex2(ctx):
     initial_P = _matrix(_eval_node(ctx, _assigned_node(ctx.tree, {"P"}, first=True)))
     reference = None
     if matrix is not None and initial_P is not None:
-        reference = _matrix_kalman(data, step, measurement_std, matrix, initial_P)
-    reference_states, reference_P = reference if reference else (None, None)
+        reference = _matrix_kalman(data, timestep, measurement_std, matrix, initial_P)
+    reference_states, reference_P = reference if reference is not None else (None, None)
 
     truth = _from_env(ctx, "true_position", length)
     if truth is not None:
