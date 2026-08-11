@@ -1,0 +1,361 @@
+/* ---------------------------------------------------------------------------
+   Typography — self-hosted from static/fonts/ (Google Fonts, OFL).
+   Work Sans          → body / UI
+   Oswald             → display headings (condensed, sits tight next to the patch)
+   Press Start 2P     → small pixel accents (module numbers, badges)
+   Bitcount Prop Single → kept only as the fallback behind Press Start 2P
+   --------------------------------------------------------------------------- */
+@font-face {
+  font-family: "Work Sans";
+  src: url("fonts/WorkSans-Variable.ttf") format("truetype-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Work Sans";
+  src: url("fonts/WorkSans-Italic-Variable.ttf") format("truetype-variations");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Oswald";
+  src: url("fonts/Oswald-Variable.ttf") format("truetype-variations");
+  font-weight: 200 700;   /* the file's actual wght axis */
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Bitcount Prop Single";
+  src: url("fonts/BitcountPropSingle-Variable.ttf") format("truetype-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Press Start 2P";
+  src: url("fonts/PressStart2P-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------------------------------------------------------------------------
+   Palette — pulled from the ISS patch (static/logo.webp): black ground, gold
+   ring (#e3c900), white lettering, rust-red wordmark. Light is white ground /
+   black ink / red accent; `<html data-theme="dark">` flips it to black ground /
+   white ink, with red and gold lightened to stay legible. Raw gold is far too
+   pale for text on white, so `--gold` is fills and rules only and `--gold-ink`
+   is its readable sibling. Green appears solely as a pass/fail signal.
+   --------------------------------------------------------------------------- */
+:root {
+  /* raw brand colours — available for one-off accents */
+  --red: #c0271b;
+  --red-deep: #8a1e0b;
+  --gold: #e3c900;      /* straight off the patch — fills and rules only */
+  --gold-ink: #8a6b00;  /* the readable version, for gold-coloured text */
+  --black: #0c0c0e;
+  --white: #ffffff;
+
+  --bg: #ffffff;
+  --bg-glow: #fdf3ee;
+  --panel: var(--white);
+  --panel-2: #f6f6f7;
+  --ink: var(--black);
+  --muted: #6b6b73;
+  --line: #e3e3e6;
+  --accent: var(--red);
+  --accent-hover: var(--red-deep);
+  --accent-on: var(--white);
+  --accent-2: #17171b;
+  --accent-3: var(--red);
+  --ok: #1c7a4f;
+  --bad: var(--red);
+  --warn: var(--gold-ink);
+
+  --code-bg: #f5f5f6;
+  --example-bg: #fafafb;
+  --cell-out-bg: #f2f2f4;
+  --cell-out-ink: #3b3b42;
+  --ex-bg-1: var(--white);
+  --ex-bg-2: #f7f7f8;
+  --btn-bg: #f3f3f5;
+  --ex-out-bg: #fafafb;
+  --ex-out-ink: #1c1c21;
+  --ex-out-error-ink: var(--red-deep);
+  --row-bg: #fafafb;
+  --topbar-bg: rgba(255, 255, 255, .85);
+
+  --ok-tint: rgba(28, 122, 79, .12);
+  --bad-tint: rgba(192, 39, 27, .1);
+  --accent-tint: rgba(192, 39, 27, .1);
+  --accent2-tint: rgba(23, 23, 27, .08);
+  --accent3-tint: rgba(192, 39, 27, .1);
+  --muted-tint: rgba(107, 107, 115, .12);
+  --warn-tint: rgba(227, 201, 0, .22);
+
+  --radius: 12px;
+  --ui: "Work Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --display: "Oswald", "Work Sans", sans-serif;
+  --pixel: "Press Start 2P", "Bitcount Prop Single", monospace;
+  --mono: "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
+}
+
+:root[data-theme="dark"] {
+  --red: #ff5f52;
+  --red-deep: #e03e2f;
+  --gold: #e3c900;
+  --gold-ink: #f0cf3a;
+  --black: #08080a;
+  --white: #ffffff;
+
+  --bg: var(--black);
+  --bg-glow: #1c0f08;
+  --panel: #131316;
+  --panel-2: #0e0e11;
+  --ink: #f2f2f4;
+  --muted: #9a9aa4;
+  --line: #2a2a30;
+  --accent: var(--red);
+  --accent-hover: #ff8578;
+  --accent-on: #0c0c0e;
+  --accent-2: #f2f2f4;
+  --accent-3: var(--red);
+  --ok: #35c47f;
+  --bad: var(--red);
+  --warn: var(--gold-ink);
+
+  --code-bg: #101014;
+  --example-bg: #0f0f13;
+  --cell-out-bg: #0b0b0e;
+  --cell-out-ink: #c3c3cc;
+  --ex-bg-1: #141418;
+  --ex-bg-2: #0f0f13;
+  --btn-bg: #1c1c22;
+  --ex-out-bg: var(--black);
+  --ex-out-ink: #dcdce2;
+  --ex-out-error-ink: #ffb9ae;
+  --row-bg: #0e0e12;
+  --topbar-bg: rgba(8, 8, 10, .82);
+
+  --ok-tint: rgba(53, 196, 127, .14);
+  --bad-tint: rgba(255, 95, 82, .14);
+  --accent-tint: rgba(255, 95, 82, .14);
+  --accent2-tint: rgba(242, 242, 244, .1);
+  --accent3-tint: rgba(255, 95, 82, .14);
+  --muted-tint: rgba(154, 154, 164, .14);
+  --warn-tint: rgba(240, 207, 58, .16);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: radial-gradient(1200px 600px at 70% -10%, var(--bg-glow) 0%, var(--bg) 55%);
+  background-attachment: fixed;
+  color: var(--ink);
+  font: 400 16px/1.65 var(--ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ---- top bar ---- */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 26px;
+  border-bottom: 1px solid var(--line);
+  background: var(--topbar-bg);
+  backdrop-filter: blur(8px);
+  position: sticky; top: 0; z-index: 20;
+}
+/* red / gold / ink hairline under the header — the fourth colour is the page */
+.topbar::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+  background: linear-gradient(90deg,
+    var(--red) 0 34%, var(--gold) 34% 50%, var(--ink) 50% 66%, var(--red) 66%);
+}
+.brand {
+  display: inline-flex; align-items: center; gap: 10px;
+  color: var(--ink); font-family: var(--display); font-weight: 700;
+  font-size: 19px; letter-spacing: .4px;
+}
+.brand:hover { text-decoration: none; color: var(--accent); }
+.logo { height: 30px; width: auto; display: block; }
+.who { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); }
+#student-label { color: var(--ink); font-weight: 600; }
+.link-btn { background: none; border: none; color: var(--accent); cursor: pointer; font: inherit; font-size: 13px; }
+.link-btn.danger { color: var(--muted); }
+.link-btn.danger:hover { color: var(--bad); }
+
+#theme-toggle {
+  border: 1px solid var(--line); background: var(--btn-bg); color: var(--ink);
+  border-radius: 999px; cursor: pointer; padding: 5px 12px; font: 600 13px/1 var(--ui);
+  transition: border-color .15s, color .15s;
+}
+#theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
+
+main { max-width: 900px; margin: 0 auto; padding: 32px 22px 90px; }
+
+/* ---- index ---- */
+.hero h1 {
+  font-family: var(--display); font-weight: 600; font-size: 34px; line-height: 1.25;
+  margin: 6px 0 12px; letter-spacing: .2px;
+}
+.hero p { color: var(--muted); max-width: 640px; }
+
+.module-list { list-style: none; padding: 0; margin: 30px 0 0; display: grid; gap: 12px; }
+.module-card .card-face {
+  display: flex; align-items: center; gap: 18px;
+  padding: 18px 20px;
+  background: linear-gradient(180deg, var(--panel), var(--panel-2));
+  border: 1px solid var(--line); border-radius: var(--radius);
+  color: var(--ink); transition: border-color .15s, transform .15s, box-shadow .15s;
+}
+.module-card a.card-face:hover {
+  border-color: var(--accent); transform: translateY(-1px); text-decoration: none;
+  box-shadow: 0 2px 0 var(--accent-tint);
+}
+/* Locked: dimmed, flat, and inert — it is a <span>, so there is no click target. */
+.module-card.locked .card-face {
+  background: var(--panel-2); border-style: dashed;
+  opacity: .6; cursor: not-allowed;
+}
+.module-card.locked .name,
+.module-card.locked .index { color: var(--muted); }
+.module-card .index {
+  font: 400 13px/1 var(--pixel); color: var(--accent-3); opacity: .85; min-width: 38px;
+}
+.module-card .name { font-weight: 600; font-size: 18px; }
+.module-card .meta { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
+.module-card .body { flex: 1; }
+.badge { font: 400 9px/1.4 var(--pixel); padding: 6px 9px; border-radius: 6px; white-space: nowrap; }
+.badge.done { background: var(--ok-tint); color: var(--ok); }
+.badge.partial { background: var(--warn-tint); color: var(--warn); }
+.badge.locked { background: var(--panel); color: var(--muted); border: 1px solid var(--line); }
+.empty { color: var(--muted); }
+.notice {
+  margin: 22px 0 0; padding: 12px 14px; font-size: 14px;
+  background: var(--warn-tint); color: var(--warn);
+  border: 1px solid var(--line); border-radius: var(--radius);
+}
+.notice.admin-notice { background: var(--accent-tint); color: var(--accent); }
+#admin-toggle[data-admin="1"] { color: var(--accent-2); font-weight: 600; }
+
+/* ---- module page ---- */
+.back { font-size: 14px; color: var(--muted); }
+.back:hover { color: var(--accent); }
+.module-title {
+  font-family: var(--display); font-weight: 600; font-size: 30px; line-height: 1.25;
+  margin: 12px 0 24px;
+}
+.prose { margin: 18px 0; }
+.prose h1, .prose h2 { font-family: var(--display); font-weight: 600; line-height: 1.3; }
+.prose h1 { font-size: 26px; margin: 26px 0 10px; }
+.prose h2 { font-size: 22px; margin: 24px 0 8px; color: var(--accent-3); }
+.prose h3 { font-size: 18px; font-weight: 600; margin: 20px 0 6px; }
+.prose code { font-family: var(--mono); background: var(--code-bg); padding: 1px 6px; border-radius: 5px; font-size: .92em; }
+.prose pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow-x: auto; }
+.prose pre code { background: none; padding: 0; }
+.prose blockquote { border-left: 3px solid var(--gold); margin: 12px 0; padding: 2px 14px; color: var(--muted); }
+
+/* Notebook figures. The saved PNGs are 1300-1500px wide, so without a cap they
+   run straight past the 900px column. The white ground is deliberate in both
+   themes: a matplotlib plot is drawn for white paper, and its black axes and
+   tick labels would be unreadable floating on the dark theme's background. */
+.prose img {
+  display: block; max-width: 100%; height: auto;
+  margin: 16px auto; padding: 10px;
+  background: var(--white); border: 1px solid var(--line); border-radius: 8px;
+}
+.cell-figure {
+  display: block; width: 100%; height: auto;
+  padding: 12px; background: var(--white); border-top: 1px dashed var(--line);
+}
+
+/* worked examples */
+.example { margin: 16px 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.example .highlight { margin: 0; background: none; }
+.example pre { margin: 0; padding: 14px 16px; background: var(--example-bg); overflow-x: auto; font-family: var(--mono); font-size: 14px; }
+.example .CodeMirror { border: 0; border-radius: 0; background: var(--example-bg); }
+.example .CodeMirror-gutters { background: var(--example-bg); border-right: 1px solid var(--line); }
+.example-actions {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px; background: var(--panel-2); border-top: 1px solid var(--line);
+}
+.example-actions .btn { padding: 6px 12px; font-size: 13px; }
+.example-hint { font-size: 12px; color: var(--muted); }
+.cell-output {
+  margin: 0; padding: 10px 16px; background: var(--cell-out-bg); border-top: 1px dashed var(--line);
+  color: var(--cell-out-ink); font-family: var(--mono); font-size: 13px; white-space: pre-wrap; overflow-x: auto;
+}
+.cell-output.error { color: var(--ex-out-error-ink); }
+
+.ex-figures:empty { display: none; }
+.ex-figures .cell-figure {
+  margin: 14px 0 0; border: 1px solid var(--line); border-radius: 8px;
+}
+
+/* exercises */
+.exercise {
+  margin: 22px 0; padding: 16px 18px 18px;
+  background: linear-gradient(180deg, var(--ex-bg-1), var(--ex-bg-2));
+  border: 1px solid var(--line); border-left: 3px solid var(--accent-3);
+  border-radius: 10px;
+}
+.exercise.is-done { border-left-color: var(--ok); }
+.ex-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.ex-title { font-weight: 700; }
+.tag { font: 400 8.5px/1.5 var(--pixel); text-transform: uppercase; padding: 5px 8px; border-radius: 6px; white-space: nowrap; }
+.tag.graded { background: var(--accent3-tint); color: var(--accent-3); }
+.tag.practice { background: var(--muted-tint); color: var(--muted); }
+.ex-status { margin-left: auto; font-size: 13px; font-weight: 600; }
+.ex-status.pass { color: var(--ok); }
+.ex-status.fail { color: var(--bad); }
+
+/* light editor follows the parchment palette; the dark theme ships its own colours */
+.CodeMirror {
+  height: auto; border: 1px solid var(--line); border-radius: 8px; font-size: 14px;
+  background: var(--panel); color: var(--ink);
+}
+.CodeMirror-gutters { background: var(--panel-2); border-right: 1px solid var(--line); }
+.CodeMirror-linenumber { color: var(--muted); }
+.CodeMirror-cursor { border-left-color: var(--ink); }
+.CodeMirror-scroll { min-height: 60px; }
+
+.ex-actions { display: flex; gap: 10px; margin: 12px 0 0; }
+.btn {
+  font: 600 14px/1 var(--ui); padding: 9px 16px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--btn-bg); color: var(--ink); transition: .15s;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn.check { background: var(--accent); border-color: var(--accent); color: var(--accent-on); }
+.btn.check:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: var(--accent-on); }
+.btn:disabled { opacity: .55; cursor: progress; }
+
+.ex-output {
+  margin: 14px 0 0; padding: 10px 14px; border-radius: 8px;
+  background: var(--ex-out-bg); border: 1px solid var(--line);
+  font-family: var(--mono); font-size: 13px; white-space: pre-wrap; overflow-x: auto; color: var(--ex-out-ink);
+}
+.ex-output.error { border-color: var(--bad); color: var(--ex-out-error-ink); }
+
+.feedback { margin: 12px 0 0; display: grid; gap: 8px; }
+.check-row {
+  display: grid; grid-template-columns: 20px 1fr; gap: 10px; align-items: start;
+  padding: 9px 12px; border-radius: 8px; background: var(--row-bg); border: 1px solid var(--line); font-size: 14px;
+}
+.check-row.ok { border-color: var(--ok); }
+.check-row.no { border-color: var(--bad); }
+.check-row .mark { font-weight: 800; }
+.check-row.ok .mark { color: var(--ok); }
+.check-row.no .mark { color: var(--bad); }
+.check-row .detail { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.check-row .kv { font-family: var(--mono); font-size: 12.5px; }
+.check-row .kv .exp { color: var(--ok); }
+.check-row .kv .got { color: var(--bad); }
+.banner { padding: 10px 14px; border-radius: 8px; font-weight: 600; }
+.banner.pass { background: var(--ok-tint); color: var(--ok); }
+.banner.fail { background: var(--bad-tint); color: var(--bad); }
