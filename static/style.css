@@ -197,6 +197,73 @@ a:hover { text-decoration: underline; }
 }
 #theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
 
+/* ---- extra resources button with rainbow border ---- */
+.extra-resources-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  font: 600 13px/1 var(--ui);
+  color: var(--ink);
+  background: transparent;
+  border-radius: 999px;
+  text-decoration: none;
+  isolation: isolate;
+  margin-right: 6px;
+  transition: transform 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Rainbow border gradient */
+.extra-resources-btn::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    #ff0000,
+    #ff7f00,
+    #ffff00,
+    #00ff00,
+    #00c3ff,
+    #4b0082,
+    #9400d3,
+    #ff0000
+  );
+  background-size: 300% 300%;
+  z-index: -2;
+  animation: rainbow-rotate 4s linear infinite;
+}
+
+/* Mask inner region to create clean 2px border */
+.extra-resources-btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--panel);
+  border-radius: 999px;
+  z-index: -1;
+  transition: background 0.15s ease;
+}
+
+@keyframes rainbow-rotate {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.extra-resources-btn:hover {
+  text-decoration: none;
+  color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 0 10px rgba(255, 0, 128, 0.4), 0 0 16px rgba(0, 195, 255, 0.3);
+}
+
+.extra-resources-btn:hover::after {
+  background: var(--btn-bg);
+}
+
 main { max-width: 900px; margin: 0 auto; padding: 32px 22px 90px; }
 
 /* ---- index ---- */
