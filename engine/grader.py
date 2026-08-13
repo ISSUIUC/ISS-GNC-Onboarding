@@ -126,6 +126,25 @@ def run_cell(module: Module, cell_index: int, code: str) -> RunResult:
     return execute(module.setup_code(cell_index), code, [])
 
 
+def run_cell_with_live_setup(setup: list[str], code: str) -> RunResult:
+    """Run one cell using the *client's current, unsaved* earlier-cell contents.
+
+    Worked-example cells are individually editable, but each one runs in its
+    own fresh subprocess — nothing persists between them the way it would in a
+    live Jupyter kernel. `run_cell()` papers over that by replaying the
+    notebook *file's* saved source for earlier cells, which is fine for
+    read-only worked examples, but wrong for a notebook where the student is
+    meant to fill in several cells (e.g. __init__/predict/update) and then
+    exercise what they wrote in a later cell: it would silently reset those
+    earlier cells back to their saved stub text.
+
+    Here `setup` is instead whatever's currently sitting in those earlier
+    cells' editors on the page (see static/app.js), so edits actually carry
+    forward within one browser session, closer to how Jupyter behaves.
+    """
+    return execute(setup, code, [])
+
+
 def grade(module: Module, exercise: Exercise, student_code: str) -> GradeResult:
     if not exercise.graded:
         # Practice cell: running it successfully is the whole bar.

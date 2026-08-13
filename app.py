@@ -55,6 +55,7 @@ MODULE_ORDER = [
     "basic_filters",
     "kalman_filter",
     "extended_kalman_filter",
+    "filter_from_scratch",
 ]
 
 
@@ -210,7 +211,16 @@ def run_cell():
         abort(400)
     if not any(b.kind == "code" and b.cell_index == cell_index for b in module.blocks):
         abort(404)
-    result = grader.run_cell(module, cell_index, data.get("code", ""))
+    # The page sends along the *current, unsaved* contents of every earlier
+    # example cell (see static/app.js) so state built across cells — e.g.
+    # filling in __init__/predict/update separately, then testing them —
+    # carries forward like it would in a live Jupyter kernel, instead of the
+    # server resetting those cells back to the notebook's saved stub text.
+    live_setup = data.get("setup")
+    if isinstance(live_setup, list) and all(isinstance(s, str) for s in live_setup):
+        result = grader.run_cell_with_live_setup(live_setup, data.get("code", ""))
+    else:
+        result = grader.run_cell(module, cell_index, data.get("code", ""))
     return jsonify(
         ok=result.ok, stdout=result.stdout, error=result.error, figures=result.figures
     )
