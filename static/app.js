@@ -259,13 +259,20 @@ function renderInlineCode(s) {
 }
 
 /* ---- worked examples: editable and runnable, but never graded ----
-   The server replays the cells above each one, so an example behaves like the
-   notebook cell it came from. Edits are local to the page — a reload restores
-   the notebook's own code and its saved output. */
+   Every example cell on the page keeps its own live CodeMirror instance in
+   `exampleCells` (indexed by its notebook cell index). Running a cell sends
+   the *current, unsaved* contents of every earlier example cell on the page
+   as `setup`, so state you build across several cells (e.g. filling in
+   __init__/predict/update in separate cells, then testing them in a later
+   one) carries forward the way it would in a live Jupyter kernel — instead
+   of the server replaying the notebook file's original saved source for
+   those earlier cells. A page reload still resets everything to the
+   notebook's saved code, same as before. */
 function initExamples() {
   const moduleEl = document.querySelector(".module");
   if (!moduleEl) return;
   const moduleId = moduleEl.dataset.module;
+  const exampleCells = []; // { cellIndex, cm }, filled as each cell initializes below
 
   document.querySelectorAll(".example[data-cell]").forEach((ex) => {
     const textarea = ex.querySelector(".example-editor");
@@ -288,17 +295,26 @@ function initExamples() {
     editors.push(cm);
 
     const cell = ex.dataset.cell;
+    const cellIndex = Number(cell);
+    exampleCells.push({ cellIndex, cm });
+
     const runBtn = ex.querySelector(".btn.run");
     const result = ex.querySelector(".cell-result");
 
     async function runCell() {
       runBtn.disabled = true;
       cm.save();
+      // Every other example cell has already been through the loop above (it
+      // runs synchronously), so exampleCells is fully populated by click time.
+      const setup = exampleCells
+        .filter((e) => e.cellIndex < cellIndex)
+        .sort((a, b) => a.cellIndex - b.cellIndex)
+        .map((e) => e.cm.getValue());
       try {
         const res = await fetch("/run-cell", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ module: moduleId, cell: Number(cell), code: cm.getValue() }),
+          body: JSON.stringify({ module: moduleId, cell: cellIndex, code: cm.getValue(), setup }),
         });
         const r = await res.json();
         renderResult(r.error ? r.error : r.stdout, !!r.error, r.figures);
