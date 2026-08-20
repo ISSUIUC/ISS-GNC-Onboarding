@@ -13,7 +13,6 @@
 // initialize the filter with a zero state and any other member variables you need
 filter_scratch::filter_scratch() {
     std::cout << "initialize run" << std::endl;
-
     state = Eigen::VectorXd::Zero(6);
 }
 

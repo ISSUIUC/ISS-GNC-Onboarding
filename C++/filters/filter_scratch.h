@@ -1,3 +1,5 @@
+#pragma once
+
 #include "../libraries/eigen-5.0.0/Eigen/Dense"
 #include <fstream>
 #include <iostream>
