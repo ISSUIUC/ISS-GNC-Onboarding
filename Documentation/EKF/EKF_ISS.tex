@@ -1,0 +1,436 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{caption}
+\usepackage{titlepic} % Adds the \titlepic command
+
+\title{EKF-MASTERDOC}
+
+\titlepic{\includegraphics[width=0.25\textwidth]{iss_logo.jpg}}
+\author{Ahmed Khan (2026 GNC Lead)}
+\date{Edition: August 20th 2026}
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\newpage
+\section{Introduction}
+
+ISS's EKF is a constantly evolving state estimation algorithm that fuses multiple sensors to provide a estimate on the rocket's position and velocity during flight. The filter fuses, 
+\begin{itemize}[nosep]
+    \item \textbf{Barometer} altitude measurements (always available),
+    \item \textbf{GPS} position measurements (when a valid fix is available),
+    \item \textbf{IMU acceleration} data.
+\end{itemize}
+
+
+\subsection{Key Dimensions}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Constant} & \textbf{Value / Meaning} \\
+\midrule
+\texttt{NUM\_STATES} & 6 \, --\, $[x, v_x, y, v_y, z, v_z]$ \\
+\texttt{NUM\_SENSOR\_INPUTS} & 4 \, --\, [barometer, GPS-x, GPS-y, GPS-z] \\
+\texttt{NUM\_CONTROL\_INPUTS} & 3 \, --\, $[a_x, a_y, a_z]$ \\
+\texttt{ALTITUDE\_BUFFER\_SIZE} & 10 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Vector Definitions}
+\subsection{State Vector}
+Here we summarize the state definitions utilized throughout the EKF. 
+
+Firstly, the state $\vec{x}_k \in \mathbb{R}^6$ is defined as
+
+\begin{equation}
+   \vec{x}_k =
+\begin{bmatrix}
+x \\ v_x \\ y \\ v_y \\ z \\ v_z 
+\end{bmatrix} \in \mathbb{R}^6,
+\end{equation}
+
+where $x$ is altitude, $y$ is the east horizontal position,
+$z$ is the north horizontal position, and $v_x, v_y, v_z$ are the corresponding velocities. 
+
+\subsection{Measurment Vector}
+When GPS is available, the measurement vector is
+
+\begin{equation}
+    \vec{y}_k =
+\begin{bmatrix}
+\text{baro. altitude} \\
+\text{GPS altitude} \\
+\text{$GPS_{east}$} \\
+\text{$GPS_{north}$}
+\end{bmatrix} \in \mathbb{R}^4 .
+\end{equation}
+
+
+When GPS is unavailable, only the barometer measurement is used and the filter produces a alternative definition based on only a barometer measurement as referenced in Section \ref{sec:gps_not}. It is important to note that GPS packets are \textbf{quantized} and are not continuous. Thus, a filter cannot assume that at each iteration there will be a new GPS update.  Furthermore, \text{$GPS_{east}$} and \text{$GPS_{north}$} are derived by converting the current GPS longitude and latitude positioning and the original launch pad GPS longitude and latitude into ECEF coordinates. The difference between these positions is then converted into the local East-North-Up (ENU) frame. 
+
+The GPS latitude and longitude are first converted from the integer representation provided by the GPS into degrees,
+
+\begin{equation}
+{lat} = \frac{{GPS}_{lat}}{10^7},
+{lon} = \frac{{GPS}_{lon}}{10^7}.
+\end{equation}
+
+The current rocket GPS position is then converted into Earth-Centered, Earth-Fixed (ECEF) coordinates using the current latitude, longitude, and altitude along with an ephemeris, 
+
+
+    
+\begin{equation}
+  {rocket}_{GPS} = ECEF(lat_0, lon_0, 0).
+\end{equation}
+
+The original launch pad GPS position is used as the reference starting point, 
+
+\begin{equation}
+  {reference}_{GPS} = ECEF(lat_0, lon_0, 0).
+\end{equation}
+
+
+The difference between the rocket's GPS position and the original launch pad position is then, 
+\begin{equation}
+  {rocket}_{GPS} - {reference}_{GPS} = 
+\begin{bmatrix}
+\Delta x\\
+\Delta y\\
+\Delta z \\
+\end{bmatrix}.  
+\end{equation}
+
+
+
+Using the original launch pas latitude $lat_0$ and longitude $lon_0$, this ECEF displacement is then converted into the local ENU frame by, 
+
+\begin{equation}
+GPS_{east} = -\sin(lon_0)\Delta x
++\cos(lon_0)\Delta y, 
+\end{equation}
+
+and 
+
+\begin{equation}
+   GPS_{north} = 
+-\sin(lat_0)\cos(lon_0)\Delta x
+-\sin(lat_0)\sin(lon_0)\Delta y
++\cos(lat_0)\Delta z.
+\end{equation}
+
+These values represent the rocket's displacement east and north from the launch pad reference position. The complete measurement vector is therefore formulated as, 
+
+\begin{equation}
+    \vec{y}_k =
+\begin{bmatrix}
+\text{baro. altitude} \\
+\text{GPS altitude} \\
+\text{$GPS_{east}$} \\
+\text{$GPS_{north}$}
+\end{bmatrix} \in \mathbb{R}^4 .
+\end{equation}
+
+
+\subsection{Control Vector (Model Based Input)}
+
+During the predict step of the Kalman Filter, linear acceleration control input from the IMU is utilized to produce a predicted position and velocity of the rocket. This linear acceleration input from the IMU is defined as, 
+
+\begin{equation}
+   \vec{u}_k =
+\begin{bmatrix}
+a_x \\ a_y \\ a_z
+\end{bmatrix} \in \mathbb{R}^3 . 
+\end{equation}
+
+
+
+While on the pad (\texttt{FSM\_state <= STATE\_IDLE}), the acceleration input is zeroed out as defined in Section \ref{sec:reset}, so that sensor noise/gravity bias does not affect  the state estimate.
+\newpage
+\subsection{Summary of Inputs, Outputs and Units}
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{|c|c|c|}
+        \hline
+         Variable & Meaning & Unit \\
+         \hline
+         $x$ & altitude & meter \\ 
+         $y$ & east & meter \\ 
+         $z$ & north & meter \\ 
+         $v_x$ & altitude velocity & meter per second \\ 
+         $v_y$ & east velocity & meter per second \\ 
+         $v_z$ & north velocity & meter per second \\
+         $baro$ & barometer altitude & meter \\ 
+         $GPS_{altitude}$ & GPS altitude & meter  \\ 
+         $GPS_{north}$ & GPS local north position & meter \\
+         $GPS_{east}$ & GPS local east position & meter \\
+         $a_x$ & altitude acceleration & meter per $\text{second}^2$ \\ 
+         $a_y$ & east acceleration & meter per $\text{second}^2$ \\ 
+         $a_z$ & north acceleration & meter per $\text{second}^2$ \\
+        \hline
+    \end{tabular}
+    \caption{Summary of inputs, outputs and their corresponding units utilized in the EKF.}
+    \label{tab:placeholder}
+\end{table}
+\section{Matrix Definitions}
+\label{sec:matrix_defn}
+\subsection{State Transition Matrix $\mathbf{F}$}
+
+A constant-velocity physics model is utilized at time steps , $\Delta t$, 
+
+\begin{equation}
+    \mathbf{F}(\Delta t) =
+\begin{bmatrix}
+1 & \Delta t & 0 & 0 & 0 & 0 \\
+0 & 1 & 0 & 0 & 0 & 0 \\
+0 & 0 & 1 & \Delta t & 0 & 0 \\
+0 & 0 & 0 & 1 & 0 & 0 \\
+0 & 0 & 0 & 0 & 1 & \Delta t \\
+0 & 0 & 0 & 0 & 0 & 1
+\end{bmatrix}.
+\end{equation}
+
+
+
+\subsection{Control Input State Transition Matrix $\mathbf{B}$}
+
+Acceleration is factored into position and velocity using standard constant-acceleration kinematics, 
+
+\[
+\mathbf{B}(\Delta t) =
+\begin{bmatrix}
+\tfrac12 \Delta t^2 & 0 & 0 \\
+\Delta t & 0 & 0 \\
+0 & \tfrac12 \Delta t^2 & 0 \\
+0 & \Delta t & 0 \\
+0 & 0 & \tfrac12 \Delta t^2 \\
+0 & 0 & \Delta t
+\end{bmatrix}.
+\]
+
+It is important to note that the Matrix $\mathbf{F}$ combined with $\mathbf{B}$ together produce the full kinematics model referenced in Section \ref{sec:algo}'s Equation \ref{eq:state_prediction} utilized for the EKF. Thus, while there are two state transitions matrices, there is still only one constant acceleration physics model utilized. 
+
+\subsection{Process Noise Covariance $\mathbf{Q}$}
+
+$\mathbf{Q}$ models the physics model uncertainty used in the \textit{predict} step, 
+
+\begin{equation}
+\mathbf{Q}_{\text{axis}}(\Delta t) =
+\sigma_a^2
+\begin{bmatrix}
+\dfrac{\Delta t^4}{4} & \dfrac{\Delta t^3}{2} \\[6pt]
+\dfrac{\Delta t^3}{2} & \Delta t^2
+\end{bmatrix},    
+\end{equation}
+
+such that $\sigma_a$ corresponds to a scalar coefficient of uncertainty. 
+
+
+\subsection{Measurement Matrix $\mathbf{H}$}
+
+\begin{equation}
+ \begin{bmatrix}
+1 & 0 & 0 & 0 & 0 & 0 \\
+1 & 0 & 0 & 0 & 0 & 0 \\
+0 & 0 & 1 & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & 1 & 0
+\end{bmatrix},   
+\end{equation}
+
+
+$\mathbf{H}$ maps state to barometer altitude, GPS altitude, $\text{GPS}_{east}$, and $\text{GPS}_{north}$. 
+
+\subsection{Measurement Noise Covariance $\mathbf{R}$}
+
+\begin{equation}
+\mathbf{R} =
+\begin{bmatrix}
+0.1 & 0 & 0 & 0 \\
+0 & 1.5 & 0 & 0 \\
+0 & 0 & 3.0 & 0 \\
+0 & 0 & 0 & 3.0
+\end{bmatrix},
+\end{equation}
+
+
+corresponding to barometer, GPS altitude, $\text{GPS}_{east}$, and $\text{GPS}_{north}$ noise variances, respectively. Larger values indicate lower trust in that sensor's measurement.
+
+\subsection{Initial Covariance $\mathbf{P}_0$}
+
+An arbitrarily initial covariance is set for each position/velocity independently, 
+
+\begin{equation}
+\mathbf{P}_0 =
+\begin{bmatrix}
+10^{-2} & 0 & 0 & 0 & 0 & 0 \\
+0 & 10^{-2} & 0 & 0 & 0 & 0 \\
+0 & 0 & 10^{-2} & 0 & 0 & 0 \\
+0 & 0 & 0 & 10^{-2} & 0 & 0 \\
+0 & 0 & 0 & 0 & 10^{-2} & 0 \\
+0 & 0 & 0 & 0 & 0 & 10^{-2} 
+\end{bmatrix}.   
+\end{equation}
+
+
+
+\section{The EKF Algorithm}
+\label{sec:algo}
+
+The Kalman Filter is a state estimation algorithm that combines a predicted state based on a physics model with noisy sensor measurements. The filter consists of two main steps: the \textbf{predict} step and the \textbf{update} step.
+
+\subsection{Predict Step}
+The predicted state is first calculated using the previous state and the physics model, 
+
+\begin{equation}
+    \vec{x}_{k|k-1} =
+    \mathbf{F}_k \vec{x}_{k-1|k-1}
+    + \mathbf{B}_k \vec{u}_k .
+    \label{eq:state_prediction}
+\end{equation}
+
+Such that, $\mathbf{F}$ pushs the previous state forward in time, while $\mathbf{B}\vec{u}$ accounts for the effect of the accelerometer on the state. The result is the predicted state based on the kinematic equations of constant acceleration. 
+
+We then compute the covariance of the predicted state as, 
+
+\begin{equation}
+    \mathbf{P}_{k|k-1} =
+    \mathbf{F}_k \mathbf{P}_{k-1|k-1} \mathbf{F}_k^T
+    + \mathbf{Q}_k .
+    \label{eq:covariance_prediction}
+\end{equation}
+
+This propagates a new uncertainty in the current state (now with the new prediction). $\mathbf{Q}$ represents the  uncertainty introduced by the physics model.
+\newline 
+\subsection{Update Step}
+\label{sec:state_update}
+Once a sensor measurement is available, the measurement residual is calculated,
+
+\begin{equation}
+    \vec{r}_k =
+    \vec{y}_k -
+    \mathbf{H}_k \vec{x}_{k|k-1}.
+    \label{eq:measurement_residual}
+\end{equation}
+
+The residual represents the difference between the sensor measurements from the barometer/GPS and the current state estimate as predicted from the physics model.
+
+The innovation covariance is then calculated as
+
+\begin{equation}
+    \mathbf{S}_k =
+    \mathbf{H}_k \mathbf{P}_{k|k-1} \mathbf{H}_k^T
+    + \mathbf{R}_k .
+    \label{eq:innovation_covariance}
+\end{equation}
+
+This represents the expected uncertainty in the residual. It accounts for both uncertainty in the predicted state and uncertainty in the sensor measurement.
+
+The new Kalman gain is then calculated using
+
+\begin{equation}
+    \mathbf{K}_k =
+    \mathbf{P}_{k|k-1}
+    \mathbf{H}_k^T
+    \mathbf{S}_k^{-1}.
+    \label{eq:kalman_gain}
+\end{equation}
+
+The Kalman gain determines how much the new GPS and barometer information should influence the state estimate. A larger Kalman gain translates to a greater confidence in the new measurements. Finally, the predicted state is then corrected using the residual, 
+
+\begin{equation}
+    \vec{x}_{k|k} =
+    \vec{x}_{k|k-1}
+    + \mathbf{K}_k \vec{r}_k .
+    \label{eq:state_update}
+\end{equation}
+
+Finally, the covariance is updated to reflect the new state's uncertainty after sensor fusion, 
+
+\begin{equation}
+    \mathbf{P}_{k|k} =
+    (\mathbf{I} - \mathbf{K}_k\mathbf{H}_k)
+    \mathbf{P}_{k|k-1}.
+    \label{eq:covariance_update}
+\end{equation}
+
+Together, these equations form the Extended Kalman Filter we implement at ISS.  
+
+
+
+\subsection{Kalman Reset} 
+
+Upon Kalman Filter reset, matrices are redefined as outlined in Section \ref{sec:matrix_defn}. Furthermore, $x_k$ is set as, 
+
+\begin{equation}
+    x_k =\begin{bmatrix}
+        \bar{\tau} \\
+        0 \\
+        0\\
+        0\\
+        0\\
+        0\\
+        
+    \end{bmatrix}
+\end{equation}
+
+such that, 
+
+\begin{equation}
+\bar{\tau} = \frac{1}{30}\sum_{i=1}^{30} barometer_{altitude_i} 
+\end{equation}
+
+Here, $\tau$ represents the average altitude of the rocket at time of reset based on the 30 most recent barometer altitude packets received. 
+
+\label{sec:reset}
+
+\section{Alternative Configuration: GPS data not found }
+\label{sec:gps_not}
+Due to the \textbf{quantized} nature of GPS measurements, a GPS measurement may not always be available for the update step as outlined by Section \ref{sec:state_update}. Under these conditions the filter redefines following matrices, 
+
+\begin{equation}
+\mathbf{H} =  
+\begin{bmatrix}
+        1 \\ 
+        0 \\
+        0\\
+        0\\
+        0  \\      
+        0 \\      
+\end{bmatrix}
+\end{equation}
+
+
+\begin{equation}
+   \mathbf{R} = \begin{bmatrix}
+       0.1
+   \end{bmatrix}
+\end{equation}
+
+
+and the measurement vector is then simply, 
+
+\begin{equation}
+    y_k =
+\begin{bmatrix}
+\text{barometer altitude} 
+\end{bmatrix}
+\end{equation}
+
+These new definitions are then subsequently transformed in the update step of the filter as defined in Section \ref{sec:state_update}. 
+
+\end{document}
