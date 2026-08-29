@@ -27,10 +27,17 @@ challenges, since inserting a cell above one can't then re-point it.
 | | | ex3 | `#% checker: tune_the_filter` |
 | `extended_kalman_filter.ipynb` | `extended_kalman_filter.py` | ex1 | `check_ex1` |
 | | | ex2 | `#% checker: bearing_measurement` |
+| `filter_from_scratch.ipynb` | `filter_from_scratch.py` | ex1 | `#% checker: initialize_step` |
+| | | ex2 | `#% checker: predict_step` |
+| | | ex3 | `#% checker: update_step` |
 
 `introduction-ex3/4/5` and `vectors-ex2` aren't here — they have a reference
 solution to diff against, so a plain `#% check:` / `#% check_output` directive
 grades them and a behaviour checker would be the wrong tool.
+
+`resources.ipynb` has no checker because it has no code: it's a markdown list of
+links. `filter_from_scratch.ipynb`'s SILSIM cell has none either, and that one is
+a limitation rather than a choice — see the next section.
 
 ## The one constraint that shapes these files
 
@@ -50,13 +57,20 @@ subprocess (`engine/runner.py`). So:
   `ctx.tree` for the calls instead.
 - `ctx.defined` / `ctx.get` only match names the *submission* assigns, so the
   replayed setup cells can't produce a false positive.
+- **The cells above the one being graded are replayed from the lead's
+  *reference* solution, not from what the student wrote there.** Usually that's
+  what you want. It's the one thing `filter_from_scratch.py` can't work around:
+  a checker on that notebook's SILSIM cell would be flying the reference filter,
+  so the three step functions are each graded on their own instead, and the
+  end-to-end run stays an ungraded cell the student drives from the page (which
+  *does* use their live edits — `run_cell_with_live_setup`).
 - A checker that raises replaces all student feedback with one "Automatic checks
   … crashed" row, so guard against `None`, wrong types and odd shapes throughout.
 
 ## Testing a change
 
 ```
-uv run python notebooks/checkers/sweep.py           # all six notebooks
+uv run python notebooks/checkers/sweep.py           # every notebook with exercises
 uv run python notebooks/checkers/sweep.py kalman    # just the Kalman ones
 ```
 

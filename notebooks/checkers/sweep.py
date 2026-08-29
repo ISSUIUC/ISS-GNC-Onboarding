@@ -3,7 +3,7 @@
 
 The fastest way to know a checker is sane is to feed it the answer the lead
 wrote for that exercise: if the reference can't pass, no student can. This
-sweeps all six notebooks and prints one row per exercise.
+sweeps every notebook with exercises in it and prints one row per exercise.
 
     uv run python notebooks/checkers/sweep.py           # everything
     uv run python notebooks/checkers/sweep.py kalman    # notebooks matching "kalman"
@@ -31,6 +31,7 @@ NOTEBOOKS = [
     "basic_filters.ipynb",
     "kalman_filter.ipynb",
     "extended_kalman_filter.ipynb",
+    "filter_from_scratch.ipynb",
 ]
 
 # Authoring gaps that predate the checker work: these four exercises ship a
