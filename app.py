@@ -55,6 +55,7 @@ MODULE_ORDER = [
     "basic_filters",
     "kalman_filter",
     "extended_kalman_filter",
+    "orientation_estimation",
     "filter_from_scratch",
 ]
 

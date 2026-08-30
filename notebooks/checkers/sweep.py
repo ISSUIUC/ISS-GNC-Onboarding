@@ -31,6 +31,7 @@ NOTEBOOKS = [
     "basic_filters.ipynb",
     "kalman_filter.ipynb",
     "extended_kalman_filter.ipynb",
+    "Orientation_Estimation.ipynb",
     "filter_from_scratch.ipynb",
 ]
 

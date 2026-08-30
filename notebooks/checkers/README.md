@@ -27,6 +27,7 @@ challenges, since inserting a cell above one can't then re-point it.
 | | | ex3 | `#% checker: tune_the_filter` |
 | `extended_kalman_filter.ipynb` | `extended_kalman_filter.py` | ex1 | `check_ex1` |
 | | | ex2 | `#% checker: bearing_measurement` |
+| `orientation_estimation.ipynb` | `orientation_estimation.py` | ex1, ex2 | `check_ex1`, `check_ex2` |
 | `filter_from_scratch.ipynb` | `filter_from_scratch.py` | ex1 | `#% checker: initialize_step` |
 | | | ex2 | `#% checker: predict_step` |
 | | | ex3 | `#% checker: update_step` |
