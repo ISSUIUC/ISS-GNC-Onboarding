@@ -36,6 +36,7 @@ class _Opaque:
 
 def decode(enc: dict):
     """Inverse of runner._encode."""
+    #lololol more code
     t = enc.get("t")
     if t == "ndarray":
         return np.array(enc["data"], dtype=enc["dtype"])

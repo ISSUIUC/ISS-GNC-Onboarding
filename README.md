@@ -8,4 +8,6 @@ uv run python app.py # start the server
 ```
 From there, open: <http://127.0.0.1:5000>, type your name once, and work through the modules.
 
+jonathan was here
+
 ![Alt text](SPACESHOT.webp)
